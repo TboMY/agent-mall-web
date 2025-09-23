@@ -4,13 +4,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
+// gittest
+// gittest
 export default defineConfig({
   plugins: [
     vue(),
   ],
+  //gittest
+  
   resolve: {
-    // remote git test
-    // remote git test
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
