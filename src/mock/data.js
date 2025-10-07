@@ -1,14 +1,14 @@
 export const bannerImages = [
-  'https://tse3.mm.bing.net/th/id/OIP.g9UbVfyVZX-SfD09JcYr5QHaEK?rs=1&pid=ImgDetMain&o=7&rm=3',
-  'https://tse3.mm.bing.net/th/id/OIP.g9UbVfyVZX-SfD09JcYr5QHaEK?rs=1&pid=ImgDetMain&o=7&rm=3',
-  'https://tse3.mm.bing.net/th/id/OIP.g9UbVfyVZX-SfD09JcYr5QHaEK?rs=1&pid=ImgDetMain&o=7&rm=3'
+  'https://res.vmallres.com/uomcdn/CN/cms/202509/e0da42cd75ee44b18599bd514caaf538.jpg',
+  'https://res.vmallres.com/uomcdn/CN/cms/202509/e0da42cd75ee44b18599bd514caaf538.jpg',
+  'https://res.vmallres.com/uomcdn/CN/cms/202509/e0da42cd75ee44b18599bd514caaf538.jpg'
 ]
 
 export const products = Array.from({ length: 20 }).map((_, i) => ({
   id: String(i + 1),
   name: `AI 热点商品 ${i + 1}`,
   price: Number((Math.random() * 200 + 20).toFixed(2)),
-  image: 'https://tse3.mm.bing.net/th/id/OIP.g9UbVfyVZX-SfD09JcYr5QHaEK?rs=1&pid=ImgDetMain&o=7&rm=3',
+  image: 'https://res.vmallres.com/uomcdn/CN/cms/202509/e0da42cd75ee44b18599bd514caaf538.jpg',
   heat: Math.floor(Math.random() * 10000),
   source: ['🔥源自B站热门视频', '🔥源自抖音热榜', '🔥源自小红书爆文'][i % 3],
   createdAt: Date.now() - i * 86400000,
