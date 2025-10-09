@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '@/views/HomeView.vue'
 import HotProductsView from '@/views/HotProductsView.vue'
+import CategoriesView from '@/views/CategoriesView.vue'
 import ProductDetailView from '@/views/ProductDetailView.vue'
 import AdminAgentView from '@/views/AdminAgentView.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
@@ -13,6 +14,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/hot-products', name: 'hot-products', component: HotProductsView },
+    { path: '/categories', name: 'categories', component: CategoriesView },
     { path: '/product/:id', name: 'product-detail', component: ProductDetailView },
     { path: '/admin/agent', name: 'admin-agent', component: AdminAgentView },
     { path: '/admin/login', name: 'admin-login', component: AdminLogin },

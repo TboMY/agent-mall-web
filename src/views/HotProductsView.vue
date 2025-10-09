@@ -5,20 +5,39 @@ import SiteFooter from '@/components/SiteFooter.vue'
 import { ref, computed } from 'vue'
 import { products } from '@/mock/data'
 
-const sortKey = ref('heat')
+// Keep same filters and defaults as homepage AI section
+const sortType = ref('time')
+const sourceFilter = ref('all')
 const currentPage = ref(1)
-const pageSize = 8
+const pageSize = 12
 
-const sorted = computed(() => {
-  const list = [...products]
-  if (sortKey.value === 'heat') return list.sort((a, b) => b.heat - a.heat)
-  if (sortKey.value === 'time') return list.sort((a, b) => b.createdAt - a.createdAt)
-  return list
+const sortOptions = [
+  { label: '按时间排序', value: 'time' },
+  { label: '按热度排序', value: 'heat' }
+]
+
+const sourceOptions = [
+  { label: '全部来源', value: 'all' },
+  { label: '小红书', value: '小红书' },
+  { label: '抖音', value: '抖音' },
+  { label: 'B站', value: 'B站' }
+]
+
+const filteredAndSorted = computed(() => {
+  let list = products
+  if (sourceFilter.value !== 'all') {
+    list = list.filter(p => p.source && p.source.includes(sourceFilter.value))
+  }
+  if (sortType.value === 'heat') {
+    return [...list].sort((a, b) => b.heat - a.heat)
+  }
+  // default keep time order similar to homepage (createdAt desc)
+  return [...list].sort((a, b) => b.createdAt - a.createdAt)
 })
 
 const pageData = computed(() => {
   const start = (currentPage.value - 1) * pageSize
-  return sorted.value.slice(start, start + pageSize)
+  return filteredAndSorted.value.slice(start, start + pageSize)
 })
 </script>
 
@@ -26,25 +45,135 @@ const pageData = computed(() => {
   <el-container direction="vertical">
     <NavBar />
     <el-main class="page-container">
-      <h2>AI 实时追热点 · 爆款抢先上</h2>
-      <div style="margin: 12px 0; display:flex; gap: 12px; align-items:center;">
-        <span>排序：</span>
-        <el-select v-model="sortKey" style="width: 200px;">
-          <el-option label="按热度排序" value="heat" />
-          <el-option label="按上架时间排序" value="time" />
-        </el-select>
-      </div>
-      <el-row :gutter="16">
-        <el-col v-for="item in pageData" :key="item.id" :xs="12" :sm="8" :md="6" :lg="6">
-          <ProductCard :product="item" :showSource="true" />
-        </el-col>
-      </el-row>
-      <div style="display:flex; justify-content:center; margin-top: 16px;">
-        <el-pagination background layout="prev, pager, next" :total="sorted.length" :page-size="pageSize" v-model:current-page="currentPage" />
+      <div class="ai-hot-section">
+        <div class="section-header">
+          <h2 class="title">🔥 AI 实时追热点 · 今日爆款抢先上</h2>
+          <div class="ai-tag">← AI推荐标签</div>
+        </div>
+
+        <div class="filters">
+          <div class="filter-group">
+            <label>排序方式：</label>
+            <el-select v-model="sortType" placeholder="选择排序" size="small" style="width: 120px;">
+              <el-option
+                v-for="option in sortOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </div>
+
+          <div class="filter-group">
+            <label>来源平台：</label>
+            <el-select v-model="sourceFilter" placeholder="选择来源" size="small" style="width: 120px;">
+              <el-option
+                v-for="option in sourceOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </div>
+        </div>
+
+        <div class="products-grid">
+          <div v-for="item in pageData" :key="item.id" class="product-item">
+            <ProductCard :product="item" :show-source="true" :show-recommendation="true" />
+          </div>
+        </div>
+
+        <div class="section-footer" style="justify-content: center;">
+          <el-pagination
+            background
+            layout="prev, pager, next"
+            :total="filteredAndSorted.length"
+            :page-size="pageSize"
+            v-model:current-page="currentPage"
+          />
+        </div>
       </div>
     </el-main>
     <SiteFooter />
   </el-container>
 </template>
+
+<style scoped>
+.ai-hot-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-size: 14px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #e1251b;
+  margin: 0;
+}
+
+.ai-tag {
+  font-size: 14px;
+  color: #666;
+  background: #f0f9ff;
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid #e1f5fe;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 1200px) {
+  .products-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .filters { flex-direction: column; gap: 12px; }
+}
+</style>
 
 
