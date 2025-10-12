@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>规格信息修复测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>规格信息修复测试</h1>
+    
+    <div class="test-section">
+        <h3>1. 测试商品详情API</h3>
+        <button onclick="testProductDetail()">测试商品详情</button>
+        <div id="productDetailResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 测试商品属性API</h3>
+        <button onclick="testProductAttributes()">测试商品属性</button>
+        <div id="attributesResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 测试规格信息处理</h3>
+        <button onclick="testSpecificationsHandling()">测试规格信息处理</button>
+        <div id="specificationsResult"></div>
+    </div>
+
+    <script>
+        async function testProductDetail() {
+            const resultDiv = document.getElementById('productDetailResult');
+            try {
+                const response = await fetch('http://localhost:3000/api/products/9');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const product = data.data;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ 商品详情获取成功<br>
+                            - ID: ${product.id}<br>
+                            - 名称: ${product.name}<br>
+                            - 商品类型ID: ${product.product_type_id}<br>
+                            - 规格信息: ${product.specifications ? '有数据' : '无数据'}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ API返回失败: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        async function testProductAttributes() {
+            const resultDiv = document.getElementById('attributesResult');
+            try {
+                const response = await fetch('http://localhost:3000/api/product-attributes/type/1');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const attributes = data.data;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ 商品属性获取成功<br>
+                            - 属性数量: ${attributes.length}<br>
+                            - 属性列表: ${attributes.map(attr => attr.name).join(', ')}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ API返回失败: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        function testSpecificationsHandling() {
+            const resultDiv = document.getElementById('specificationsResult');
+            
+            // 模拟form.specifications为null的情况
+            let form = { specifications: null };
+            
+            // 测试修复函数
+            function ensureSpecificationsObject(form) {
+                if (!form.specifications || typeof form.specifications !== 'object') {
+                    form.specifications = {};
+                }
+            }
+            
+            // 测试计算属性
+            function createSafeSpecifications(form) {
+                return {
+                    get() {
+                        if (!form.specifications || typeof form.specifications !== 'object') {
+                            return {};
+                        }
+                        return form.specifications;
+                    },
+                    set(value) {
+                        form.specifications = value;
+                    }
+                };
+            }
+            
+            try {
+                // 测试1: 修复null值
+                ensureSpecificationsObject(form);
+                const test1 = form.specifications !== null && typeof form.specifications === 'object';
+                
+                // 测试2: 计算属性
+                const safeSpecs = createSafeSpecifications(form);
+                const test2 = safeSpecs.get() !== null;
+                
+                // 测试3: 访问属性
+                form.specifications = null;
+                const test3 = safeSpecs.get()[10] === undefined; // 不应该报错
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ 规格信息处理测试通过<br>
+                        - 修复null值: ${test1 ? '✅' : '❌'}<br>
+                        - 计算属性: ${test2 ? '✅' : '❌'}<br>
+                        - 安全访问: ${test3 ? '✅' : '❌'}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 测试失败: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

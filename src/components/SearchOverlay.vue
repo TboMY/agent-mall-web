@@ -45,7 +45,6 @@ function clearRecent () { recent.value = [] }
 <template>
   <transition name="mask-fade">
     <div v-if="visible" class="overlay">
-      <div class="panel-top"></div>
       <transition name="slide-in">
         <div class="panel">
           <div class="search-bar">
@@ -91,13 +90,6 @@ function clearRecent () { recent.value = [] }
   z-index: 2000;
   --mask-top: 56px;
   pointer-events: auto;
-}
-
-.panel-top {
-  pointer-events: none;
-  height: var(--mask-top);
-  position: absolute;
-  z-index: 9999;
 }
 
 /* white area aligned with navbar height, visually overlaying it */
@@ -162,7 +154,7 @@ function clearRecent () { recent.value = [] }
 
 .content {
   padding: 12px;
-  max-height: calc(70vh - 56px);
+  max-height: calc(70vh - var(--mask-top));
   overflow: auto;
 }
 

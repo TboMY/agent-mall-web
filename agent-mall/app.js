@@ -3,9 +3,15 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var cors = require('cors');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var productsRouter = require('./routes/products');
+var categoriesRouter = require('./routes/categories');
+var brandsRouter = require('./routes/brands');
+var productTypesRouter = require('./routes/productTypes');
+var productAttributesRouter = require('./routes/productAttributes');
 
 var app = express();
 
@@ -13,14 +19,22 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+// 中间件
 app.use(logger('dev'));
-app.use(express.json());
+app.use(cors()); // 启用CORS
+app.use(express.json({ limit: '10mb' })); // 增加JSON解析限制
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 路由
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/products', productsRouter);
+app.use('/api/categories', categoriesRouter);
+app.use('/api/brands', brandsRouter);
+app.use('/api/product-types', productTypesRouter);
+app.use('/api/product-attributes', productAttributesRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

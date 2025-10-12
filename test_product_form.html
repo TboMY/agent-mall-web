@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品表单测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .specifications { margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 4px; }
+        .spec-item { margin-bottom: 10px; }
+        .color-preview { display: inline-block; width: 20px; height: 20px; border-radius: 3px; border: 1px solid #dcdfe6; margin-left: 8px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <h1>商品表单测试</h1>
+    
+    <div class="form-group">
+        <label for="productType">商品类型:</label>
+        <select id="productType" onchange="handleProductTypeChange()">
+            <option value="">请选择商品类型</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="productName">商品名称:</label>
+        <input type="text" id="productName" placeholder="请输入商品名称">
+    </div>
+    
+    <div id="specifications" class="specifications" style="display: none;">
+        <h3>规格信息</h3>
+        <div id="specList"></div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="testAPI()">测试API</button>
+        <button onclick="showFormData()">显示表单数据</button>
+    </div>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px;"></div>
+
+    <script>
+        let productTypes = [];
+        let productAttributes = [];
+        let formData = {
+            product_type_id: null,
+            specifications: {}
+        };
+
+        // 测试API
+        async function testAPI() {
+            try {
+                // 获取商品类型
+                const typesResponse = await fetch('http://localhost:3000/api/product-types/active');
+                const typesData = await typesResponse.json();
+                console.log('商品类型:', typesData);
+                
+                if (typesData.success) {
+                    productTypes = typesData.data;
+                    updateProductTypeSelect();
+                }
+                
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(typesData, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('API测试失败:', error);
+                document.getElementById('result').innerHTML = 'API测试失败: ' + error.message;
+            }
+        }
+
+        // 更新商品类型选择框
+        function updateProductTypeSelect() {
+            const select = document.getElementById('productType');
+            select.innerHTML = '<option value="">请选择商品类型</option>';
+            
+            productTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = type.name;
+                select.appendChild(option);
+            });
+        }
+
+        // 处理商品类型变化
+        async function handleProductTypeChange() {
+            const productTypeId = document.getElementById('productType').value;
+            formData.product_type_id = productTypeId ? parseInt(productTypeId) : null;
+            formData.specifications = {};
+            
+            if (productTypeId) {
+                try {
+                    // 获取商品属性
+                    const attributesResponse = await fetch(`http://localhost:3000/api/product-attributes/type/${productTypeId}`);
+                    const attributesData = await attributesResponse.json();
+                    console.log('商品属性:', attributesData);
+                    
+                    if (attributesData.success) {
+                        productAttributes = attributesData.data;
+                        updateSpecifications();
+                    }
+                } catch (error) {
+                    console.error('获取商品属性失败:', error);
+                }
+            } else {
+                productAttributes = [];
+                updateSpecifications();
+            }
+        }
+
+        // 更新规格信息
+        function updateSpecifications() {
+            const specsDiv = document.getElementById('specifications');
+            const specList = document.getElementById('specList');
+            
+            if (productAttributes.length === 0) {
+                specsDiv.style.display = 'none';
+                return;
+            }
+            
+            specsDiv.style.display = 'block';
+            specList.innerHTML = '';
+            
+            productAttributes.forEach(attribute => {
+                const specItem = document.createElement('div');
+                specItem.className = 'spec-item';
+                
+                let inputHtml = '';
+                if (attribute.value_type === 'single') {
+                    inputHtml = `
+                        <select onchange="updateSpecification(${attribute.id}, this.value)">
+                            <option value="">请选择${attribute.name}</option>
+                            ${attribute.values.map(value => 
+                                `<option value="${value.id}">${value.label}${value.color ? `<span class="color-preview" style="background-color: ${value.color}"></span>` : ''}</option>`
+                            ).join('')}
+                        </select>
+                    `;
+                } else if (attribute.value_type === 'multiple') {
+                    inputHtml = `
+                        <select multiple onchange="updateSpecificationMultiple(${attribute.id}, this)">
+                            ${attribute.values.map(value => 
+                                `<option value="${value.id}">${value.label}${value.color ? `<span class="color-preview" style="background-color: ${value.color}"></span>` : ''}</option>`
+                            ).join('')}
+                        </select>
+                    `;
+                } else if (attribute.value_type === 'custom') {
+                    inputHtml = `
+                        <input type="text" placeholder="请输入${attribute.name}" onchange="updateSpecification(${attribute.id}, this.value)">
+                    `;
+                }
+                
+                specItem.innerHTML = `
+                    <label>${attribute.name}${attribute.is_required ? ' *' : ''}:</label>
+                    ${inputHtml}
+                `;
+                
+                specList.appendChild(specItem);
+            });
+        }
+
+        // 更新规格值
+        function updateSpecification(attributeId, value) {
+            formData.specifications[attributeId] = value;
+        }
+
+        // 更新多选规格值
+        function updateSpecificationMultiple(attributeId, selectElement) {
+            const values = Array.from(selectElement.selectedOptions).map(option => option.value);
+            formData.specifications[attributeId] = values;
+        }
+
+        // 显示表单数据
+        function showFormData() {
+            const result = {
+                product_type_id: formData.product_type_id,
+                specifications: formData.specifications,
+                product_name: document.getElementById('productName').value
+            };
+            document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        }
+
+        // 页面加载时测试API
+        window.onload = function() {
+            testAPI();
+        };
+    </script>
+</body>
+</html>
