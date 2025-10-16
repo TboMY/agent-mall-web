@@ -21,7 +21,21 @@ const productAttributeSchema = Joi.object({
   value_type: Joi.string().valid('single', 'multiple', 'custom').default('single'),
   is_required: Joi.number().integer().valid(0, 1).default(0),
   sort_order: Joi.number().integer().min(0).default(0),
-  status: Joi.number().integer().valid(0, 1).default(1)
+  status: Joi.number().integer().valid(0, 1).default(1),
+  // 允许携带属性值数组（前端只传label即可）
+  values: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.string().max(255),
+      Joi.object({
+        label: Joi.string().max(255).required(),
+        value: Joi.string().allow('').optional(),
+        color: Joi.string().allow('').optional(),
+        image: Joi.string().allow('').optional(),
+        sort_order: Joi.number().integer().min(0).optional(),
+        status: Joi.number().integer().valid(0,1).optional()
+      })
+    )
+  ).optional()
 });
 
 const attributeValueSchema = Joi.object({
@@ -102,11 +116,15 @@ router.post('/', validate(productAttributeSchema), async (req, res) => {
     
     // 如果有属性值，批量创建
     if (values && values.length > 0) {
-      const valuesData = values.map((value, index) => ({
-        value: value.label,
-        label: value.label,
-        sort_order: index + 1
-      }));
+      const valuesData = values.map((v, index) => {
+        if (typeof v === 'string') {
+          return { value: v, label: v, sort_order: index + 1 }
+        } else {
+          const val = (v.value && String(v.value).trim()) || (v.label && String(v.label).trim()) || ''
+          const label = (v.label && String(v.label).trim()) || val
+          return { value: val, label, color: v.color, image: v.image, sort_order: v.sort_order || index + 1, status: v.status }
+        }
+      });
       await ProductAttribute.createValues(attributeId, valuesData);
     }
     
@@ -148,12 +166,16 @@ router.put('/:id', validate(productAttributeSchema), async (req, res) => {
         await ProductAttribute.deleteValue(value.id);
       }
       
-      // 创建新的属性值
-      const valuesData = values.map((value, index) => ({
-        value: value.label,
-        label: value.label,
-        sort_order: index + 1
-      }));
+      // 创建新的属性值（兼容字符串或对象）
+      const valuesData = values.map((v, index) => {
+        if (typeof v === 'string') {
+          return { value: v, label: v, sort_order: index + 1 }
+        } else {
+          const val = (v.value && String(v.value).trim()) || (v.label && String(v.label).trim()) || ''
+          const label = (v.label && String(v.label).trim()) || val
+          return { value: val, label, color: v.color, image: v.image, sort_order: v.sort_order || index + 1, status: v.status }
+        }
+      });
       await ProductAttribute.createValues(id, valuesData);
     }
     

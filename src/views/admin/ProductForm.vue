@@ -36,15 +36,7 @@
             </el-form-item>
           </el-col>
           
-          <el-col :span="12">
-            <el-form-item label="商品SKU" prop="sku">
-              <el-input
-                v-model="form.sku"
-                placeholder="请输入商品SKU"
-                maxlength="100"
-              />
-            </el-form-item>
-          </el-col>
+          
           
           <el-col :span="24">
             <el-form-item label="商品描述" prop="description">
@@ -56,6 +48,61 @@
                 maxlength="1000"
                 show-word-limit
               />
+            </el-form-item>
+          </el-col>
+          
+          <!-- 图片信息（移动到基本信息） -->
+          <el-col :span="24">
+            <el-form-item label="主图" prop="image">
+              <el-input
+                v-model="form.image"
+                placeholder="请输入主图URL"
+                style="width: 100%"
+              />
+              <div v-if="form.image" class="image-preview">
+                <el-image
+                  :src="form.image"
+                  :alt="form.name"
+                  style="width: 120px; height: 120px; margin-top: 10px;"
+                  fit="cover"
+                  :preview-src-list="[form.image]"
+                />
+              </div>
+            </el-form-item>
+          </el-col>
+          
+          <el-col :span="24">
+            <el-form-item label="商品图片">
+              <div class="image-list">
+                <div
+                  v-for="(image, index) in imageList"
+                  :key="index"
+                  class="image-item"
+                >
+                  <el-input
+                    v-model="imageList[index]"
+                    placeholder="请输入图片URL"
+                    style="width: calc(100% - 40px); margin-right: 10px;"
+                  />
+                  <el-button
+                    type="danger"
+                    size="small"
+                    @click="removeImage(index)"
+                    :disabled="imageList.length <= 1"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="addImage"
+                  style="margin-top: 10px;"
+                >
+                  <el-icon><Plus /></el-icon>
+                  添加图片
+                </el-button>
+              </div>
             </el-form-item>
           </el-col>
           
@@ -115,10 +162,10 @@
         </el-row>
 
         <el-row :gutter="20">
-          <!-- 价格信息 -->
+          <!-- 价格与库存 -->
           <el-col :span="24">
             <div class="form-section">
-              <h3>价格信息</h3>
+              <h3>价格与库存</h3>
             </div>
           </el-col>
           
@@ -145,16 +192,8 @@
               />
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <!-- 库存信息 -->
-          <el-col :span="24">
-            <div class="form-section">
-              <h3>库存信息</h3>
-            </div>
-          </el-col>
           
+          <!-- 合并库存到该小节 -->
           <el-col :span="12">
             <el-form-item label="库存数量" prop="stock">
               <el-input-number
@@ -166,16 +205,7 @@
             </el-form-item>
           </el-col>
           
-          <el-col :span="12">
-            <el-form-item label="热度分数" prop="heat_score">
-              <el-input-number
-                v-model="form.heat_score"
-                :min="0"
-                placeholder="请输入热度分数"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
+          
         </el-row>
 
         <el-row :gutter="20" v-if="productAttributes.length > 0 || form.product_type_id">
@@ -251,68 +281,7 @@
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
-          <!-- 图片信息 -->
-          <el-col :span="24">
-            <div class="form-section">
-              <h3>图片信息</h3>
-            </div>
-          </el-col>
-          
-          <el-col :span="24">
-            <el-form-item label="主图" prop="image">
-              <el-input
-                v-model="form.image"
-                placeholder="请输入主图URL"
-                style="width: 100%"
-              />
-              <div v-if="form.image" class="image-preview">
-                <el-image
-                  :src="form.image"
-                  :alt="form.name"
-                  style="width: 120px; height: 120px; margin-top: 10px;"
-                  fit="cover"
-                  :preview-src-list="[form.image]"
-                />
-              </div>
-            </el-form-item>
-          </el-col>
-          
-          <el-col :span="24">
-            <el-form-item label="商品图片">
-              <div class="image-list">
-                <div
-                  v-for="(image, index) in imageList"
-                  :key="index"
-                  class="image-item"
-                >
-                  <el-input
-                    v-model="imageList[index]"
-                    placeholder="请输入图片URL"
-                    style="width: calc(100% - 40px); margin-right: 10px;"
-                  />
-                  <el-button
-                    type="danger"
-                    size="small"
-                    @click="removeImage(index)"
-                    :disabled="imageList.length <= 1"
-                  >
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
-                <el-button
-                  type="primary"
-                  size="small"
-                  @click="addImage"
-                  style="margin-top: 10px;"
-                >
-                  <el-icon><Plus /></el-icon>
-                  添加图片
-                </el-button>
-              </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
+        
 
         <el-row :gutter="20">
           <!-- AI推荐信息 -->
@@ -485,7 +454,8 @@ const form = reactive({
   ai_recommendation: '',
   source_platform: '',
   source_url: '',
-  status: 1
+  status: 1,
+  ai_candidate_id: null // 新增：AI候选商品ID
 })
 
 // 强制确保specifications是对象
@@ -525,8 +495,12 @@ const rules = {
     { min: 1, max: 255, message: '商品名称长度在1到255个字符', trigger: 'blur' }
   ],
   price: [
-    { required: true, message: '请输入销售价格', trigger: 'blur' },
-    { type: 'number', min: 0, message: '价格必须大于等于0', trigger: 'blur' }
+    { required: true, message: '请输入销售价格', trigger: ['blur','change'] },
+    { type: 'number', min: 0, message: '价格必须大于等于0', trigger: ['blur','change'] }
+  ],
+  original_price: [
+    { required: true, message: '请输入原价', trigger: ['blur','change'] },
+    { type: 'number', min: 0, message: '原价必须大于等于0', trigger: ['blur','change'] }
   ],
   image: [
     { required: true, message: '请输入主图URL', trigger: 'blur' },
@@ -536,7 +510,8 @@ const rules = {
     { required: true, message: '请选择分类', trigger: 'change' }
   ],
   stock: [
-    { type: 'number', min: 0, message: '库存必须大于等于0', trigger: 'blur' }
+    { required: true, message: '请输入库存数量', trigger: ['blur','change'] },
+    { type: 'number', min: 0, message: '库存必须大于等于0', trigger: ['blur','change'] }
   ]
 }
 
@@ -635,10 +610,18 @@ async function getProductDetail() {
         }
       }
     })
+
+    // 规范化数字字段（后端可能返回字符串）
+    normalizeNumberFields()
     
-    // 处理图片列表
+    // 处理图片列表（兼容数组/JSON字符串）
     if (product.images) {
-      const images = JSON.parse(product.images)
+      let images = []
+      if (Array.isArray(product.images)) {
+        images = product.images
+      } else if (typeof product.images === 'string') {
+        try { images = JSON.parse(product.images) || [] } catch (_) { images = [] }
+      }
       imageList.value = images.length > 0 ? images : ['']
     }
     
@@ -678,15 +661,38 @@ async function getProductDetail() {
     // 确保在编辑模式下也显示规格信息模块（即使没有规格数据）
     console.log('编辑模式：当前属性数量:', productAttributes.value.length)
     
-    // 处理标签列表
+    // 处理标签列表（兼容数组/JSON字符串/逗号分隔）
     if (product.tags) {
-      const tags = JSON.parse(product.tags)
+      let tags = []
+      if (Array.isArray(product.tags)) {
+        tags = product.tags
+      } else if (typeof product.tags === 'string') {
+        try {
+          const parsed = JSON.parse(product.tags)
+          tags = Array.isArray(parsed) ? parsed : String(product.tags).split(',').map(s=>s.trim()).filter(Boolean)
+        } catch (_) {
+          tags = String(product.tags).split(',').map(s=>s.trim()).filter(Boolean)
+        }
+      }
       tagList.value = tags || []
     }
   } catch (error) {
     ElMessage.error('获取商品详情失败')
     console.error(error)
   }
+}
+
+// 将可能为字符串的数字字段转为数字
+function normalizeNumberFields() {
+  const toNumber = (v, def = 0) => {
+    if (v === '' || v === null || v === undefined) return def
+    const n = Number(v)
+    return Number.isNaN(n) ? def : n
+  }
+  form.price = toNumber(form.price, 0)
+  form.original_price = toNumber(form.original_price, 0)
+  form.stock = toNumber(form.stock, 0)
+  form.heat_score = toNumber(form.heat_score, 0)
 }
 
 // 添加图片
@@ -726,6 +732,8 @@ function removeTag(index) {
 // 提交表单
 async function handleSubmit() {
   try {
+    // 提交前规范化数字字段，避免前端校验把字符串判为非法
+    normalizeNumberFields()
     await formRef.value.validate()
     
     loading.value = true
@@ -736,8 +744,16 @@ async function handleSubmit() {
     // 处理标签列表
     const tags = tagList.value
     
+    // 复制并剔除不应提交的字段
+    const cleaned = { ...form }
+    // 编辑时不需要 ai_candidate_id；创建时需要把它带上用于后端联动
+    if (isEdit.value) {
+      delete cleaned.ai_candidate_id
+    }
+    delete cleaned._specifications
+
     const submitData = {
-      ...form,
+      ...cleaned,
       images: images.length > 0 ? images : null,
       tags: tags.length > 0 ? tags : null
     }
@@ -776,17 +792,72 @@ function goBack() {
 }
 
 // 页面加载时获取数据
-onMounted(() => {
+onMounted(async () => {
   // 确保specifications是对象
   ensureSpecificationsObject()
   
-  getCategories()
+  // 先加载基础数据
+  await getCategories()
   getBrands()
   getProductTypes()
+  
+  // 处理从AI推荐页面传递的参数（在分类数据加载完成后）
+  handleAIRecommendationData()
+  
   if (isEdit.value) {
     getProductDetail()
   }
 })
+
+// 处理从AI推荐页面传递的数据
+function handleAIRecommendationData() {
+  const query = route.query
+  
+  // 检查是否来自AI推荐
+  if (query.from_ai_recommendation === 'true') {
+    console.log('从AI推荐页面进入，开始填充数据:', query)
+    
+    // 填充AI推荐的基础数据
+    if (query.name) form.name = query.name
+    if (query.description) form.description = query.description
+    if (query.image) form.image = query.image
+    if (query.heat_score) form.heat_score = parseFloat(query.heat_score) || 0
+    if (query.source_platform) form.source_platform = query.source_platform
+    if (query.source_url) form.source_url = query.source_url
+    if (query.download_url) form.download_url = query.download_url
+    if (query.source_keyword) form.source_keyword = query.source_keyword
+    
+    // 设置AI候选商品ID
+    if (query.ai_candidate_id) {
+      form.ai_candidate_id = parseInt(query.ai_candidate_id)
+      console.log('设置AI候选商品ID:', form.ai_candidate_id)
+    }
+    
+    // 设置AI推荐相关字段
+    form.is_ai_recommended = true
+    form.ai_recommendation = query.description || ''
+    
+    // 处理分类（AI推荐传递的是分类ID）
+    if (query.category) {
+      // 检查传递的是否为数字（分类ID）
+      const categoryId = parseInt(query.category)
+      if (!isNaN(categoryId)) {
+        // 直接使用分类ID
+        form.category_id = categoryId
+        console.log('设置分类ID:', categoryId)
+      } else {
+        // 如果传递的是分类名称，则查找对应的ID
+        const category = categories.value.find(cat => cat.name === query.category)
+        if (category) {
+          form.category_id = category.id
+          console.log('通过名称找到分类ID:', category.id, '分类名称:', category.name)
+        }
+      }
+    }
+    
+    console.log('AI推荐数据填充完成:', form)
+  }
+}
 </script>
 
 <style scoped>

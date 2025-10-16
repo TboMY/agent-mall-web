@@ -134,14 +134,14 @@
                 :alt="row.name"
                 class="product-image"
                 fit="cover"
-                :preview-src-list="[row.image]"
+              
               />
               <div class="product-details">
                 <div class="product-name">{{ row.name }}</div>
                 <div class="product-meta">
                   <el-tag v-if="row.is_ai_recommended" type="danger" size="small">AI推荐</el-tag>
                   <el-tag v-if="row.source_platform" size="small">{{ row.source_platform }}</el-tag>
-                  <el-tag v-if="row.tags" v-for="tag in JSON.parse(row.tags || '[]')" :key="tag" size="small">{{ tag }}</el-tag>
+                  <el-tag v-for="tag in getTags(row)" :key="tag" size="small">{{ tag }}</el-tag>
                 </div>
               </div>
             </div>
@@ -172,7 +172,7 @@
         
         <el-table-column label="销量" width="80" prop="sales_count" align="center" />
         
-        <el-table-column label="热度" width="80" prop="heat_score" align="center" />
+        
         
         <el-table-column label="分类" width="100" align="center">
           <template #default="{ row }">
@@ -441,6 +441,22 @@ function formatDate(dateString) {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleString('zh-CN')
+}
+
+// 安全获取标签数组：兼容数组/JSON字符串/逗号分隔字符串
+function getTags(row) {
+  const t = row?.tags
+  if (!t) return []
+  if (Array.isArray(t)) return t
+  if (typeof t === 'string') {
+    try {
+      const parsed = JSON.parse(t)
+      return Array.isArray(parsed) ? parsed : String(t).split(',').map(s => s.trim()).filter(Boolean)
+    } catch (_) {
+      return String(t).split(',').map(s => s.trim()).filter(Boolean)
+    }
+  }
+  return []
 }
 
 // 页面加载时获取数据

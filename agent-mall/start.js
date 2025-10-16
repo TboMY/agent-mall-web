@@ -28,7 +28,6 @@ async function startServer() {
     console.log(`   DELETE /api/products/:id       - 删除商品`);
     console.log(`   GET    /api/categories         - 获取分类列表`);
     console.log(`   GET    /api/brands             - 获取品牌列表`);
-    console.log(`\n🔧 运行测试: node test_api.js`);
   });
 }
 
@@ -36,3 +35,14 @@ startServer().catch(error => {
   console.error('❌ 启动失败:', error);
   process.exit(1);
 });
+
+const a=`
+{
+  "is_valuable": true,
+  "product_info": {
+    "name": "可爱卡通造型无线门铃",
+    "reason": "外观设计萌趣，安装便捷无需布线，音量可调且自带38首悦耳铃声，提升居家仪式感，适合作为乔迁礼物。",
+    "category": "10"
+  }
+}
+`

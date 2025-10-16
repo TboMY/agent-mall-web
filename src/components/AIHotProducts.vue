@@ -14,11 +14,12 @@ const sortOptions = [
   { label: '按热度排序', value: 'heat' }
 ]
 
+// 与后端 products.source_platform 对齐：bilibili/douyin/xiaohongshu
 const sourceOptions = [
   { label: '全部来源', value: 'all' },
-  { label: '小红书', value: '小红书' },
-  { label: '抖音', value: '抖音' },
-  { label: 'B站', value: 'B站' }
+  { label: '小红书', value: 'xiaohongshu' },
+  { label: '抖音', value: 'douyin' },
+  { label: 'B站', value: 'bilibili' }
 ]
 
 const filteredAndSortedProducts = computed(() => {
@@ -26,17 +27,24 @@ const filteredAndSortedProducts = computed(() => {
   
   // Filter by source
   if (sourceFilter.value !== 'all') {
-    filtered = filtered.filter(product => 
-      product.source && product.source.includes(sourceFilter.value)
-    )
+    filtered = filtered.filter(product => {
+      const sp = product.source_platform || product.source
+      if (!sp) return false
+      // 后端标准值直接等于；旧mock文本用includes兼容
+      return typeof sp === 'string' 
+        ? (sp === sourceFilter.value || sp.includes(sourceFilter.value))
+        : false
+    })
   }
   
   // Sort
   if (sortType.value === 'heat') {
-    return [...filtered].sort((a, b) => b.heat - a.heat)
+    const getHeat = (p) => Number(p.hot_score ?? p.heat ?? 0)
+    return [...filtered].sort((a, b) => getHeat(b) - getHeat(a))
   }
-  
-  return filtered
+  // 默认按时间，后端字段 created_at；兼容 mock 的 createdAt
+  const getTime = (p) => new Date(p.created_at ?? p.createdAt ?? 0).getTime()
+  return [...filtered].sort((a, b) => getTime(b) - getTime(a))
 })
 </script>
 
@@ -73,10 +81,15 @@ const filteredAndSortedProducts = computed(() => {
       </div>
     </div>
     
-    <div class="products-grid">
+    <div v-if="filteredAndSortedProducts.length > 0" class="products-grid">
       <div v-for="(product, index) in filteredAndSortedProducts.slice(0, 8)" :key="product.id" class="product-item">
         <ProductCard :product="product" :show-source="true" :show-recommendation="true" />
       </div>
+    </div>
+    <div v-else class="products-grid empty-grid">
+      <el-empty description="暂无AI热点商品" style="grid-column: 1 / -1;">
+        <span style="color:#909399;font-size:12px;">稍后再试或更换来源平台/排序方式</span>
+      </el-empty>
     </div>
     
     <div class="section-footer">
@@ -142,6 +155,9 @@ const filteredAndSortedProducts = computed(() => {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 16px;
+  width: 1040px; /* 固定容器宽度，空态/有数据一致 */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .section-footer {
@@ -150,6 +166,21 @@ const filteredAndSortedProducts = computed(() => {
   align-items: center;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
+}
+
+.empty-wrapper {
+  padding: 24px 0;
+}
+
+.empty-grid {
+  min-height: 120px;
+}
+
+/* 让空态在网格容器中也占满整行宽度，保持与有数据时的宽度一致 */
+:deep(.empty-grid .el-empty) {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .more-link {
@@ -164,11 +195,11 @@ const filteredAndSortedProducts = computed(() => {
 }
 
 @media (max-width: 1200px) {
-  .products-grid { grid-template-columns: repeat(3, 1fr); }
+  .products-grid { grid-template-columns: repeat(3, 1fr); width: 780px; }
 }
 
 @media (max-width: 768px) {
-  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .products-grid { grid-template-columns: repeat(2, 1fr); width: 520px; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .filters { flex-direction: column; gap: 12px; }
 }

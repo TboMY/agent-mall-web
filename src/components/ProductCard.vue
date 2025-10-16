@@ -7,6 +7,11 @@ const props = defineProps({
 })
 const router = useRouter()
 function goDetail() { router.push(`/product/${props.product.id}`) }
+function formatPrice(p) {
+  const n = Number(p?.price ?? 0)
+  if (!Number.isFinite(n)) return '—'
+  return n.toFixed(2)
+}
 </script>
 
 <template>
@@ -14,13 +19,13 @@ function goDetail() { router.push(`/product/${props.product.id}`) }
     <img :src="product.image" class="image" :alt="product.name" />
     <div class="content">
       <div class="name">{{ product.name }}</div>
-      <div class="price">￥{{ product.price.toFixed(2) }}</div>
-      <div v-if="showRecommendation && product.recommendation" class="recommendation">
-        {{ product.recommendation }}
+      <div class="price">￥{{ formatPrice(product) }}</div>
+      <div v-if="showRecommendation && (product.recommendation || product.ai_recommendation)" class="recommendation">
+        {{ product.recommendation || product.ai_recommendation }}
       </div>
       <div class="meta">
         <el-tag v-if="product.tag" type="danger" effect="dark" size="small">{{ product.tag }}</el-tag>
-        <el-tag v-if="showSource" size="small" style="margin-left: 8px;">{{ product.source }}</el-tag>
+        <el-tag v-if="showSource && (product.source || product.source_platform)" size="small" style="margin-left: 8px;">{{ product.source || product.source_platform }}</el-tag>
       </div>
     </div>
   </el-card>

@@ -137,23 +137,30 @@ class ProductAttribute {
   static async createValues(attributeId, values) {
     if (!values || values.length === 0) return [];
 
+    // 构建批量插入的SQL语句
+    const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
     const sql = `
       INSERT INTO product_attribute_values (
         attribute_id, value, label, color, image, sort_order, status
-      ) VALUES ?
+      ) VALUES ${placeholders}
     `;
     
-    const valuesData = values.map((value, index) => [
-      attributeId,
-      value.value,
-      value.label || value.value,
-      value.color || null,
-      value.image || null,
-      value.sort_order || index + 1,
-      1
-    ]);
+    const params = [];
+    values.forEach((value, index) => {
+      const v = (value.value && String(value.value).trim()) || (value.label && String(value.label).trim()) || ''
+      const label = (value.label && String(value.label).trim()) || v
+      params.push(
+        attributeId,
+        v,
+        label,
+        value.color || null,
+        value.image || null,
+        value.sort_order || index + 1,
+        value.status != null ? value.status : 1
+      );
+    });
 
-    const result = await query(sql, [valuesData]);
+    const result = await query(sql, params);
     return result.insertId;
   }
 

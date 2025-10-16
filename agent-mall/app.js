@@ -12,6 +12,10 @@ var categoriesRouter = require('./routes/categories');
 var brandsRouter = require('./routes/brands');
 var productTypesRouter = require('./routes/productTypes');
 var productAttributesRouter = require('./routes/productAttributes');
+var awemeRouter = require('./routes/aweme');
+var aiCandidatesRouter = require('./routes/aiCandidates');
+var systemConfigsRouter = require('./routes/systemConfigs');
+var Scheduler = require('./services/Scheduler');
 
 var app = express();
 
@@ -35,6 +39,9 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/brands', brandsRouter);
 app.use('/api/product-types', productTypesRouter);
 app.use('/api/product-attributes', productAttributesRouter);
+app.use('/api/aweme', awemeRouter);
+app.use('/api/ai-candidates', aiCandidatesRouter);
+app.use('/api/system-configs', systemConfigsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -53,3 +60,6 @@ app.use(function(err, req, res, next) {
 });
 
 module.exports = app;
+
+// 初始化定时任务（在应用加载后）
+Scheduler.init && Scheduler.init();

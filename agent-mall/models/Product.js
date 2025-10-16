@@ -184,7 +184,8 @@ class Product {
       source_platform,
       source_url,
       tags,
-      status = 1
+      status = 1,
+      ai_candidate_id // 新增：AI候选商品ID
     } = productData;
 
     const sql = `
@@ -223,6 +224,11 @@ class Product {
     // 处理规格信息
     if (specifications && Object.keys(specifications).length > 0) {
       await this.saveSpecifications(productId, specifications);
+    }
+
+    // 如果是从AI推荐创建的，更新AI候选商品状态
+    if (ai_candidate_id) {
+      await this.updateAICandidateStatus(ai_candidate_id, productId);
     }
 
     return productId;
@@ -389,6 +395,24 @@ class Product {
     // 批量创建规格
     if (specificationsData.length > 0) {
       await ProductSpecification.createBatch(specificationsData);
+    }
+  }
+
+  // 更新AI候选商品状态（当从AI推荐创建正式商品时）
+  static async updateAICandidateStatus(aiCandidateId, productId) {
+    const AIProductCandidate = require('./AIProductCandidate');
+    
+    try {
+      // 更新AI候选商品状态为已上架，并关联正式商品ID
+      await AIProductCandidate.update(aiCandidateId, {
+        status: 1, // 已上架
+        linked_product_id: productId
+      });
+      
+      console.log(`AI候选商品 ${aiCandidateId} 已审核通过，关联到正式商品 ${productId}`);
+    } catch (error) {
+      console.error('更新AI候选商品状态失败:', error);
+      // 这里不抛出错误，避免影响商品创建流程
     }
   }
 }

@@ -10,12 +10,12 @@ const productSchema = Joi.object({
   description: Joi.string().allow('').max(1000).messages({
     'string.max': '商品描述不能超过1000个字符'
   }),
-  price: Joi.number().positive().precision(2).required().messages({
-    'number.positive': '价格必须大于0',
+  price: Joi.number().min(0).precision(2).required().messages({
+    'number.min': '价格必须大于等于0',
     'any.required': '价格不能为空'
   }),
-  original_price: Joi.number().positive().precision(2).allow(null).messages({
-    'number.positive': '原价必须大于0'
+  original_price: Joi.number().min(0).precision(2).allow(null).messages({
+    'number.min': '原价必须大于等于0'
   }),
   image: Joi.string().uri().required().messages({
     'string.uri': '主图必须是有效的URL',
@@ -71,7 +71,9 @@ const productSchema = Joi.object({
   }),
   status: Joi.number().integer().valid(0, 1).default(1).messages({
     'any.only': '状态必须是0或1'
-  })
+  }),
+  // 允许从AI推荐带入候选ID（仅用于后端联动，不影响商品字段校验）
+  ai_candidate_id: Joi.number().integer().positive().allow(null)
 });
 
 // 分类验证规则

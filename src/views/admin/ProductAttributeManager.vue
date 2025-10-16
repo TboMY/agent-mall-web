@@ -269,7 +269,12 @@ const handleSubmit = async () => {
     const data = {
       ...form,
       product_type_id: props.productTypeId,
-      values: form.value_type !== 'custom' ? form.values.filter(v => v.label.trim()) : []
+      // 前端提交为字符串数组，后端已兼容两种格式
+      values: form.value_type !== 'custom'
+        ? form.values
+            .map(v => (v && typeof v.label === 'string' ? v.label.trim() : ''))
+            .filter(s => s)
+        : []
     }
     
     if (editingAttribute.value) {

@@ -3,7 +3,16 @@ import axios from 'axios'
 // 创建axios实例
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-  timeout: 10000,
+  timeout: 10000, // 普通接口10秒超时
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+// 创建专门用于AI分析的axios实例（超时时间更长）
+const aiApi = axios.create({
+  baseURL: 'http://localhost:3000/api',
+  timeout: 300000, // 5分钟超时，适合大模型调用
   headers: {
     'Content-Type': 'application/json'
   }
@@ -27,6 +36,21 @@ api.interceptors.response.use(
   },
   error => {
     console.error('API请求错误:', error)
+    return Promise.reject(error)
+  }
+)
+
+// AI分析接口的响应拦截器
+aiApi.interceptors.response.use(
+  response => {
+    return response.data
+  },
+  error => {
+    console.error('AI分析请求错误:', error)
+    // 对于超时错误，提供更友好的提示
+    if (error.code === 'ECONNABORTED') {
+      error.message = 'AI分析超时，请稍后刷新页面查看结果'
+    }
     return Promise.reject(error)
   }
 )
@@ -81,6 +105,11 @@ export const productAPI = {
   // 获取热门商品
   getHotProducts(limit = 10) {
     return api.get('/products/hot', { params: { limit } })
+  },
+  
+  // 批量更新商品状态
+  batchUpdateProducts(ids, data) {
+    return api.patch('/products/batch/status', { ids, ...data })
   }
 }
 
@@ -233,6 +262,95 @@ export const productAttributeAPI = {
   // 根据商品类型获取属性
   getByProductType(productTypeId) {
     return api.get(`/product-attributes/type/${productTypeId}`)
+  }
+}
+
+// AI候选商品相关API
+export const aiCandidateAPI = {
+  // 获取AI候选商品列表
+  getCandidates(params = {}) {
+    return api.get('/ai-candidates', { params })
+  },
+  
+  // 获取候选商品详情
+  getCandidate(id) {
+    return api.get(`/ai-candidates/${id}`)
+  },
+  
+  // 更新候选商品状态
+  updateStatus(id, status) {
+    return api.patch(`/ai-candidates/${id}/status`, { status })
+  },
+  
+  // 批量更新候选商品状态
+  batchUpdateStatus(ids, status) {
+    return api.patch('/ai-candidates/batch/status', { ids, status })
+  },
+  
+  // 将候选商品转换为正式商品
+  convertToProduct(id, data) {
+    return api.post(`/ai-candidates/${id}/convert`, data)
+  },
+  
+  // 获取统计信息
+  getStats() {
+    return api.get('/ai-candidates/stats/overview')
+  },
+  
+  // 删除候选商品
+  deleteCandidate(id) {
+    return api.delete(`/ai-candidates/${id}`)
+  }
+}
+
+// 系统配置相关API
+export const systemConfigAPI = {
+  // 获取所有配置
+  getAllConfigs() {
+    return api.get('/system-configs')
+  },
+  
+  // 根据分组获取配置
+  getConfigsByGroup(groupName) {
+    return api.get(`/system-configs/group/${groupName}`)
+  },
+  
+  // 获取AI工作台配置
+  getAIWorkbenchConfig() {
+    return api.get('/system-configs/ai-workbench')
+  },
+  
+  // 保存AI工作台配置
+  saveAIWorkbenchConfig(config) {
+    return api.post('/system-configs/ai-workbench', config)
+  },
+  
+  // 获取单个配置
+  getConfig(key) {
+    return api.get(`/system-configs/${key}`)
+  },
+  
+  // 设置配置
+  setConfig(key, value, type = 'string', description = '', group = 'general') {
+    return api.post(`/system-configs/${key}`, {
+      value,
+      type,
+      description,
+      group
+    })
+  },
+  
+  // 删除配置
+  deleteConfig(key) {
+    return api.delete(`/system-configs/${key}`)
+  }
+}
+
+// 抖音作品/AI分析相关API
+export const awemeAPI = {
+  // 手动触发AI选品分析（使用后端系统配置，无需请求体）
+  analyze() {
+    return aiApi.post('/aweme/analyze')
   }
 }
 

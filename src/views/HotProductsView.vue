@@ -2,8 +2,8 @@
 import NavBar from '@/components/NavBar.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
-import { ref, computed } from 'vue'
-import { products } from '@/mock/data'
+import { ref, computed, onMounted } from 'vue'
+import { productAPI } from '@/services/api'
 
 // Keep same filters and defaults as homepage AI section
 const sortType = ref('time')
@@ -18,26 +18,41 @@ const sortOptions = [
 
 const sourceOptions = [
   { label: '全部来源', value: 'all' },
-  { label: '小红书', value: '小红书' },
-  { label: '抖音', value: '抖音' },
-  { label: 'B站', value: 'B站' }
+  { label: '小红书', value: 'xiaohongshu' },
+  { label: '抖音', value: 'douyin' },
+  { label: 'B站', value: 'bilibili' }
 ]
 
+const list = ref([])
 const filteredAndSorted = computed(() => {
-  let list = products
+  let data = list.value
   if (sourceFilter.value !== 'all') {
-    list = list.filter(p => p.source && p.source.includes(sourceFilter.value))
+    data = data.filter(p => {
+      const sp = p.source_platform || p.source
+      if (!sp) return false
+      return typeof sp === 'string' ? (sp === sourceFilter.value || sp.includes(sourceFilter.value)) : false
+    })
   }
   if (sortType.value === 'heat') {
-    return [...list].sort((a, b) => b.heat - a.heat)
+    const getHeat = (p) => Number(p.hot_score ?? p.heat ?? 0)
+    return [...data].sort((a, b) => getHeat(b) - getHeat(a))
   }
   // default keep time order similar to homepage (createdAt desc)
-  return [...list].sort((a, b) => b.createdAt - a.createdAt)
+  const getTime = (p) => new Date(p.created_at ?? p.createdAt ?? 0).getTime()
+  return [...data].sort((a, b) => getTime(b) - getTime(a))
 })
 
 const pageData = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredAndSorted.value.slice(start, start + pageSize)
+})
+
+onMounted(async () => {
+  try {
+    // 取前100条，前端分页
+    const resp = await productAPI.getProducts({ page: 1, limit: 100, sort_by: 'created_at', sort_order: 'DESC' })
+    if (resp.success) list.value = resp.data || []
+  } catch (e) { console.error('加载商品失败:', e) }
 })
 </script>
 
@@ -77,10 +92,13 @@ const pageData = computed(() => {
           </div>
         </div>
 
-        <div class="products-grid">
+        <div v-if="filteredAndSorted.length > 0" class="products-grid">
           <div v-for="item in pageData" :key="item.id" class="product-item">
             <ProductCard :product="item" :show-source="true" :show-recommendation="true" />
           </div>
+        </div>
+        <div v-else class="products-grid empty-grid">
+          <el-empty description="暂无AI热点商品" style="grid-column: 1 / -1;" />
         </div>
 
         <div class="section-footer" style="justify-content: center;">
@@ -155,7 +173,12 @@ const pageData = computed(() => {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 16px;
+  width: 1040px; /* 固定容器宽度，空态/有数据一致 */
+  margin-left: auto;
+  margin-right: auto;
 }
+
+.empty-grid { min-height: 120px; }
 
 .section-footer {
   display: flex;
@@ -166,11 +189,11 @@ const pageData = computed(() => {
 }
 
 @media (max-width: 1200px) {
-  .products-grid { grid-template-columns: repeat(3, 1fr); }
+  .products-grid { grid-template-columns: repeat(3, 1fr); width: 780px; }
 }
 
 @media (max-width: 768px) {
-  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .products-grid { grid-template-columns: repeat(2, 1fr); width: 520px; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .filters { flex-direction: column; gap: 12px; }
 }
