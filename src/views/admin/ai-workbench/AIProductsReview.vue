@@ -460,7 +460,7 @@ function editProduct(product) {
     description: product.ai_reason,
     image: product.cover_url,
     heat_score: product.hot_score,
-    source_platform: 'douyin',
+    source_platform: product.source_platform || 'douyin',
     source_url: product.source_url,
     download_url: product.download_url,
     source_keyword: product.source_keyword,

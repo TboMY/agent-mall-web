@@ -16,42 +16,52 @@
         text-color="#bfcbd9"
         active-text-color="#409EFF"
       >
-        <el-menu-item index="/admin/dashboard">
+        <el-menu-item index="/admin/dashboard" v-if="auth.hasPermission('dashboard.view')">
           <el-icon><House /></el-icon>
           <span>仪表盘</span>
         </el-menu-item>
         
-        <el-sub-menu index="products">
+        <el-sub-menu index="mall" v-if="hasMallMenu">
           <template #title>
-            <el-icon><Goods /></el-icon>
-            <span>商品</span>
+            <el-icon><Shop /></el-icon>
+            <span>商城运营</span>
           </template>
-          <el-menu-item index="/admin/products/list">商品列表</el-menu-item>
-          <el-menu-item index="/admin/products/add">添加商品</el-menu-item>
-          <el-menu-item index="/admin/categories/list">分类管理</el-menu-item>
-          <el-menu-item index="/admin/brands/list">品牌管理</el-menu-item>
-          <el-menu-item index="/admin/product-types/list">商品类型</el-menu-item>
+          <el-menu-item index="/admin/products/list" v-if="auth.hasPermission('products.view')">商品列表</el-menu-item>
+          <el-menu-item index="/admin/products/add" v-if="auth.hasPermission('products.manage')">添加商品</el-menu-item>
+          <el-menu-item index="/admin/categories/list" v-if="auth.hasPermission('categories.manage')">分类管理</el-menu-item>
+          <el-menu-item index="/admin/brands/list" v-if="auth.hasPermission('brands.manage')">品牌管理</el-menu-item>
+          <el-menu-item index="/admin/product-types/list" v-if="auth.hasPermission('productTypes.manage')">规格模板</el-menu-item>
+          <el-menu-item index="/admin/homepage-display" v-if="auth.hasPermission('systemConfigs.manage')">首页展示</el-menu-item>
+          <el-menu-item index="/admin/mall-users" v-if="auth.hasPermission('mallUsers.view')">商城用户</el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="orders" v-if="hasOrderMenu">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>订单</span>
+          </template>
+          <el-menu-item index="/admin/orders/list" v-if="auth.hasPermission('orders.view')">订单列表</el-menu-item>
+          <el-menu-item index="/admin/orders/returns" v-if="auth.hasPermission('orders.manage')">退货申请处理</el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="ai" v-if="auth.hasPermission('aiWorkbench.view')">
+          <template #title>
+            <el-icon><TrendCharts /></el-icon>
+            <span>AI 选品</span>
+          </template>
+          <el-menu-item index="/admin/ai-workbench/products">候选商品审核</el-menu-item>
+          <el-menu-item index="/admin/ai-workbench/settings" v-if="auth.hasPermission('systemConfigs.manage')">工作台设置</el-menu-item>
         </el-sub-menu>
         
-        <el-menu-item index="/admin/ai-workbench/products">
-          <el-icon><TrendCharts /></el-icon>
-          <span>AI 选品工作台</span>
-        </el-menu-item>
+        <el-sub-menu index="permissions" v-if="hasPermissionMenu">
+          <template #title>
+            <el-icon><Lock /></el-icon>
+            <span>权限</span>
+          </template>
+          <el-menu-item index="/admin/permissions/users" v-if="auth.hasPermission('users.manage')">用户列表</el-menu-item>
+          <el-menu-item index="/admin/permissions/roles" v-if="auth.hasPermission('roles.manage')">角色列表</el-menu-item>
+        </el-sub-menu>
         
-        <el-menu-item index="/admin/orders">
-          <el-icon><Document /></el-icon>
-          <span>订单管理</span>
-        </el-menu-item>
-        
-        <el-menu-item index="/admin/users">
-          <el-icon><User /></el-icon>
-          <span>用户管理</span>
-        </el-menu-item>
-        
-        <el-menu-item index="/admin/settings">
-          <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
-        </el-menu-item>
       </el-menu>
     </el-aside>
     
@@ -83,7 +93,8 @@
           <el-dropdown>
             <span class="user-info">
               <el-icon><Avatar /></el-icon>
-              <span>管理员</span>
+              <span>{{ currentUserName }}</span>
+              <el-tag size="small" type="info">{{ currentUserRole }}</el-tag>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -105,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -119,6 +130,26 @@ const isCollapse = ref(false)
 const activeMenu = computed(() => {
   return route.path
 })
+
+const currentUserName = computed(() => auth.displayName)
+const currentUserRole = computed(() => auth.roleLabel)
+const hasMallMenu = computed(() => (
+  auth.hasPermission('products.view')
+  || auth.hasPermission('products.manage')
+  || auth.hasPermission('categories.manage')
+  || auth.hasPermission('brands.manage')
+  || auth.hasPermission('productTypes.manage')
+  || auth.hasPermission('systemConfigs.manage')
+  || auth.hasPermission('mallUsers.view')
+))
+const hasOrderMenu = computed(() => (
+  auth.hasPermission('orders.view')
+  || auth.hasPermission('orders.manage')
+))
+const hasPermissionMenu = computed(() => (
+  auth.hasPermission('users.manage')
+  || auth.hasPermission('roles.manage')
+))
 
 // 面包屑导航
 const breadcrumbs = computed(() => {
@@ -145,6 +176,7 @@ function getBreadcrumbName(segment, index) {
   const nameMap = {
     'admin': '管理后台',
     'dashboard': '仪表盘',
+    'mall-users': '商城用户',
     'products': '商品',
     'list': '列表',
     'add': '添加',
@@ -152,10 +184,15 @@ function getBreadcrumbName(segment, index) {
     'ai-workbench': 'AI 选品工作台',
     'categories': '分类管理',
     'brands': '品牌管理',
-    'product-types': '商品类型',
+    'product-types': '规格模板',
+    'homepage-display': '首页展示',
     'orders': '订单管理',
-    'users': '用户管理',
-    'settings': '系统设置'
+    'returns': '退货申请处理',
+    'permissions': '权限',
+    'users': '用户列表',
+    'roles': '角色列表',
+    'settings': '系统设置',
+    'forbidden': '权限受限'
   }
   
   return nameMap[segment] || segment

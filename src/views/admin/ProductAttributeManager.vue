@@ -1,10 +1,10 @@
 <template>
   <div class="product-attribute-manager">
     <div class="header">
-      <h3>属性管理 - {{ productTypeName }}</h3>
+      <h3>规格项管理 - {{ productTypeName }}</h3>
       <el-button type="primary" @click="showAddDialog = true">
         <el-icon><Plus /></el-icon>
-        添加属性
+        添加规格项
       </el-button>
     </div>
 
@@ -16,16 +16,11 @@
     >
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="编号" width="80" />
-      <el-table-column prop="name" label="属性名称" min-width="120" />
-      <el-table-column prop="product_type_name" label="商品类型" min-width="120" />
-      <el-table-column prop="value_type" label="属性是否可选" width="120" align="center">
+      <el-table-column prop="name" label="规格项名称" min-width="120" />
+      <el-table-column prop="product_type_name" label="规格模板" min-width="120" />
+      <el-table-column prop="value_type" label="值选择方式" width="120" align="center">
         <template #default="{ row }">
           {{ getValueTypeText(row.value_type) }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="value_type" label="属性值的录入方式" width="150" align="center">
-        <template #default="{ row }">
-          {{ getInputMethodText(row.value_type) }}
         </template>
       </el-table-column>
       <el-table-column prop="values" label="可选值列表" min-width="200">
@@ -52,7 +47,7 @@
     <!-- 添加/编辑属性对话框 -->
     <el-dialog
       v-model="showAddDialog"
-      :title="editingAttribute ? '编辑属性' : '添加属性'"
+      :title="editingAttribute ? '编辑规格项' : '添加规格项'"
       width="600px"
     >
       <el-form
@@ -61,11 +56,11 @@
         :rules="rules"
         label-width="100px"
       >
-        <el-form-item label="属性名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入属性名称" />
+        <el-form-item label="规格项名称" prop="name">
+          <el-input v-model="form.name" placeholder="请输入规格项名称" />
         </el-form-item>
-        <el-form-item label="属性键名" prop="attribute_key">
-          <el-input v-model="form.attribute_key" placeholder="请输入属性键名" />
+        <el-form-item label="规格键名" prop="attribute_key">
+          <el-input v-model="form.attribute_key" placeholder="请输入规格键名" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input
@@ -98,8 +93,8 @@
           </el-radio-group>
         </el-form-item>
         
-        <!-- 属性值管理 -->
-        <el-form-item label="属性值" v-if="form.value_type !== 'custom'">
+        <!-- 可选值管理 -->
+        <el-form-item label="可选值" v-if="form.value_type !== 'custom'">
           <div class="attribute-values">
             <div 
               v-for="(value, index) in form.values" 
@@ -108,7 +103,7 @@
             >
               <el-input
                 v-model="value.label"
-                placeholder="请输入属性值"
+                placeholder="请输入可选值"
                 style="width: 200px; margin-right: 10px"
               />
               <el-button 
@@ -126,7 +121,7 @@
               @click="addValue"
               style="margin-top: 10px"
             >
-              添加属性值
+              添加可选值
             </el-button>
           </div>
         </el-form-item>
@@ -141,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { productAttributeAPI } from '@/services/api'
@@ -156,8 +151,6 @@ const props = defineProps({
     default: ''
   }
 })
-
-const emit = defineEmits(['close'])
 
 // 响应式数据
 const loading = ref(false)
@@ -181,11 +174,11 @@ const form = reactive({
 // 表单验证规则
 const rules = {
   name: [
-    { required: true, message: '请输入属性名称', trigger: 'blur' },
+    { required: true, message: '请输入规格项名称', trigger: 'blur' },
     { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
   ],
   attribute_key: [
-    { required: true, message: '请输入属性键名', trigger: 'blur' },
+    { required: true, message: '请输入规格键名', trigger: 'blur' },
     { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
   ]
 }
@@ -197,20 +190,10 @@ const fetchAttributes = async () => {
     const response = await productAttributeAPI.getByProductType(props.productTypeId)
     attributes.value = response.data
   } catch (error) {
-    ElMessage.error('获取属性列表失败：' + error.message)
+    ElMessage.error('获取规格项列表失败：' + error.message)
   } finally {
     loading.value = false
   }
-}
-
-// 获取值类型标签
-const getValueTypeTag = (type) => {
-  const tags = {
-    single: 'primary',
-    multiple: 'success',
-    custom: 'warning'
-  }
-  return tags[type] || 'info'
 }
 
 // 获取值类型文本
@@ -219,16 +202,6 @@ const getValueTypeText = (type) => {
     single: '单选',
     multiple: '多选',
     custom: '自定义'
-  }
-  return texts[type] || type
-}
-
-// 获取录入方式文本
-const getInputMethodText = (type) => {
-  const texts = {
-    single: '从列表中选取',
-    multiple: '从列表中选取',
-    custom: '手工录入'
   }
   return texts[type] || type
 }

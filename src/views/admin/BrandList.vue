@@ -1,7 +1,7 @@
 <template>
   <div class="brand-management">
     <div class="page-header">
-      <h1>品牌管理</h1>
+      <h2>品牌管理</h2>
       <el-button type="primary" @click="showCreateDialog">
         <el-icon><Plus /></el-icon>
         新增品牌
@@ -296,7 +296,8 @@ onMounted(() => {
 
 <style scoped>
 .brand-management {
-  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
 .page-header {
@@ -306,7 +307,7 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.page-header h1 {
+.page-header h2 {
   margin: 0;
   color: #303133;
 }

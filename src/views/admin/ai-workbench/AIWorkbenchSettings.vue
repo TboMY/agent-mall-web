@@ -46,7 +46,6 @@
           <el-checkbox-group v-model="settingsForm.scheduledTask.platforms">
             <el-checkbox label="bilibili">B站</el-checkbox>
             <el-checkbox label="douyin">抖音</el-checkbox>
-            <el-checkbox label="xiaohongshu">小红书</el-checkbox>
           </el-checkbox-group>
           <span class="form-tip">定时任务爬取数据的平台范围</span>
         </el-form-item>
@@ -69,7 +68,6 @@
           <el-checkbox-group v-model="settingsForm.manualTrigger.platforms">
             <el-checkbox label="bilibili">B站</el-checkbox>
             <el-checkbox label="douyin">抖音</el-checkbox>
-            <el-checkbox label="xiaohongshu">小红书</el-checkbox>
           </el-checkbox-group>
           <span class="form-tip">手动触发时的数据来源平台</span>
         </el-form-item>
@@ -130,19 +128,23 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="任务类型" width="120">
+        <el-table-column label="平台" width="100">
           <template #default="{ row }">
-            <el-tag :type="getTaskTypeColor(row.task_type)">
-              {{ getTaskTypeName(row.task_type) }}
+            <el-tag :type="getPlatformTagType(row.platform)">
+              {{ getPlatformName(row.platform) }}
             </el-tag>
           </template>
         </el-table-column>
         
-        <el-table-column label="推送数量" width="100" prop="product_count" />
-        
-        <el-table-column label="执行时间" width="100">
+        <el-table-column label="关键词" min-width="220">
           <template #default="{ row }">
-            {{ row.execution_time }}s
+            <div class="keywords-cell">{{ row.keywords || '-' }}</div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="采集结果" width="120">
+          <template #default="{ row }">
+            {{ row.collected_count }}/{{ row.limit_count }}
           </template>
         </el-table-column>
         
@@ -154,20 +156,31 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="备注" min-width="200" prop="remark" />
+        <el-table-column label="耗时" width="120">
+          <template #default="{ row }">
+            {{ getExecutionDuration(row) }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="备注" min-width="220">
+          <template #default="{ row }">
+            {{ row.error_message || '执行完成' }}
+          </template>
+        </el-table-column>
       </el-table>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { systemConfigAPI } from '@/services/api'
+import { ref, reactive, onMounted, inject, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { systemConfigAPI, keywordTrendAPI } from '@/services/api'
 
 const saving = ref(false)
 const logsLoading = ref(false)
 const executionLogs = ref([])
+const refreshTrigger = inject('refreshTrigger', ref(0))
 
 // 设置表单
 const settingsForm = reactive({
@@ -175,7 +188,7 @@ const settingsForm = reactive({
     enabled: true,
     productCount: 15,
     executionTime: '00:00',
-    platforms: ['bilibili', 'douyin', 'xiaohongshu']
+    platforms: ['bilibili', 'douyin']
   },
   manualTrigger: {
     productCount: 7,
@@ -216,27 +229,12 @@ async function saveSettings() {
 async function refreshLogs() {
   logsLoading.value = true
   try {
-    // 模拟获取日志数据
-    executionLogs.value = [
-      {
-        id: 1,
-        created_at: new Date().toISOString(),
-        task_type: 'scheduled',
-        product_count: 50,
-        execution_time: 45,
-        status: 'success',
-        remark: '定时任务执行成功'
-      },
-      {
-        id: 2,
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        task_type: 'manual',
-        product_count: 10,
-        execution_time: 12,
-        status: 'success',
-        remark: '手动触发测试'
-      }
-    ]
+    const response = await keywordTrendAPI.getCollectionRuns({ page: 1, limit: 20 })
+    if (response.success) {
+      executionLogs.value = response.data.items || []
+    } else {
+      throw new Error(response.message || '获取日志失败')
+    }
   } catch (error) {
     ElMessage.error('获取执行日志失败')
     console.error(error)
@@ -245,20 +243,18 @@ async function refreshLogs() {
   }
 }
 
-// 获取任务类型名称
-function getTaskTypeName(type) {
-  const typeMap = {
-    'scheduled': '定时任务',
-    'manual': '手动触发'
+function getPlatformName(platform) {
+  const platformMap = {
+    douyin: '抖音',
+    bilibili: 'B站'
   }
-  return typeMap[type] || type
+  return platformMap[platform] || platform || '-'
 }
 
-// 获取任务类型颜色
-function getTaskTypeColor(type) {
+function getPlatformTagType(type) {
   const colorMap = {
-    'scheduled': 'primary',
-    'manual': 'success'
+    douyin: 'danger',
+    bilibili: 'primary'
   }
   return colorMap[type] || 'info'
 }
@@ -290,6 +286,13 @@ function formatDate(dateString) {
   return date.toLocaleString('zh-CN')
 }
 
+function getExecutionDuration(row) {
+  if (!row?.finished_at || !row?.created_at) return '-'
+  const durationMs = new Date(row.finished_at).getTime() - new Date(row.created_at).getTime()
+  if (!Number.isFinite(durationMs) || durationMs < 0) return '-'
+  return `${(durationMs / 1000).toFixed(1)}s`
+}
+
 // 加载配置数据
 async function loadConfig() {
   try {
@@ -308,6 +311,12 @@ async function loadConfig() {
 onMounted(() => {
   loadConfig()
   refreshLogs()
+})
+
+watch(refreshTrigger, () => {
+  if (refreshTrigger.value > 0) {
+    refreshLogs()
+  }
 })
 </script>
 
@@ -335,6 +344,12 @@ onMounted(() => {
   margin-left: 10px;
   font-size: 12px;
   color: #909399;
+}
+
+.keywords-cell {
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 

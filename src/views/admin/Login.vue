@@ -1,21 +1,32 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const form = ref({ username: '', password: '' })
 const loading = ref(false)
 
-function onSubmit() {
+async function onSubmit() {
+  if (!form.value.username || !form.value.password) {
+    ElMessage.warning('请输入用户名和密码')
+    return
+  }
+
   loading.value = true
-  setTimeout(() => {
-    const ok = auth.login(form.value.username, form.value.password)
+  try {
+    await auth.login(form.value.username, form.value.password)
     loading.value = false
-    if (ok) router.replace('/admin/dashboard')
-    else ElMessage.error('账号或密码错误（示例）')
-  }, 800)
+    router.replace(route.query.redirect || '/admin/dashboard')
+    ElMessage.success('登录成功')
+  } catch (error) {
+    loading.value = false
+    ElMessage.error(error.response?.data?.message || '登录失败')
+  }
 }
 </script>
 
@@ -35,5 +46,3 @@ function onSubmit() {
     </el-card>
   </div>
 </template>
-
-

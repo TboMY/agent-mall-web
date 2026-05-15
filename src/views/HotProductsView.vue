@@ -5,7 +5,6 @@ import SiteFooter from '@/components/SiteFooter.vue'
 import { ref, computed, onMounted } from 'vue'
 import { productAPI } from '@/services/api'
 
-// Keep same filters and defaults as homepage AI section
 const sortType = ref('time')
 const sourceFilter = ref('all')
 const currentPage = ref(1)
@@ -18,7 +17,6 @@ const sortOptions = [
 
 const sourceOptions = [
   { label: '全部来源', value: 'all' },
-  { label: '小红书', value: 'xiaohongshu' },
   { label: '抖音', value: 'douyin' },
   { label: 'B站', value: 'bilibili' }
 ]
@@ -57,16 +55,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <el-container direction="vertical">
+  <el-container direction="vertical" class="am-hot">
     <NavBar />
-    <el-main class="page-container">
-      <div class="ai-hot-section">
-        <div class="section-header">
-          <h2 class="title">🔥 AI 实时追热点 · 今日爆款抢先上</h2>
-          <div class="ai-tag">← AI推荐标签</div>
+    <el-main class="page-container am-hot__main">
+      <section class="am-hot__panel">
+        <div class="am-hot__panel-head">
+          <div>
+            <div class="am-hot__kicker">Ranked Goods</div>
+            <h2>本期推荐</h2>
+          </div>
+
+          <div class="am-hot__tag">每次刷新都能更快看到当前更值得逛的商品</div>
         </div>
 
-        <div class="filters">
+        <div class="am-hot__filters">
           <div class="filter-group">
             <label>排序方式：</label>
             <el-select v-model="sortType" placeholder="选择排序" size="small" style="width: 120px;">
@@ -92,16 +94,16 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-if="filteredAndSorted.length > 0" class="products-grid">
+        <div v-if="filteredAndSorted.length > 0" class="am-hot__grid">
           <div v-for="item in pageData" :key="item.id" class="product-item">
             <ProductCard :product="item" :show-source="true" :show-recommendation="true" />
           </div>
         </div>
-        <div v-else class="products-grid empty-grid">
+        <div v-else class="am-hot__empty">
           <el-empty description="暂无AI热点商品" style="grid-column: 1 / -1;" />
         </div>
 
-        <div class="section-footer" style="justify-content: center;">
+        <div class="am-hot__footer">
           <el-pagination
             background
             layout="prev, pager, next"
@@ -110,29 +112,76 @@ onMounted(async () => {
             v-model:current-page="currentPage"
           />
         </div>
-      </div>
+      </section>
     </el-main>
     <SiteFooter />
   </el-container>
 </template>
 
-<style scoped>
-.ai-hot-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  margin: 24px 0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+<style>
+.am-hot {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(244, 186, 92, 0.14), transparent 22%),
+    #f7f3ea;
 }
 
-.section-header {
+.am-hot__main {
+  padding-top: 26px;
+  padding-bottom: 36px;
+}
+
+.am-hot__panel {
+  border-radius: 30px;
+  background: rgba(255,255,255,0.86);
+  border: 1px solid rgba(19,35,55,0.08);
+  box-shadow: 0 20px 48px rgba(24,39,62,0.08);
+  backdrop-filter: blur(16px);
+}
+
+.am-hot__panel {
+  padding: 24px;
+}
+
+.am-hot__kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(21,43,69,0.08);
+  color: #4d6277;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.am-hot__panel-head h2 {
+  margin: 12px 0 0;
+  font-size: 34px;
+  line-height: 1.08;
+  color: #132337;
+}
+
+.am-hot__panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 18px;
   margin-bottom: 16px;
 }
 
-.filters {
+.am-hot__tag {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(248,250,252,0.88);
+  color: #607183;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.am-hot__filters {
   display: flex;
   gap: 24px;
   margin-bottom: 20px;
@@ -152,50 +201,38 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #e1251b;
-  margin: 0;
-}
-
-.ai-tag {
-  font-size: 14px;
-  color: #666;
-  background: #f0f9ff;
-  padding: 4px 12px;
-  border-radius: 16px;
-  border: 1px solid #e1f5fe;
-}
-
-.products-grid {
+.am-hot__grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 16px;
-  width: 1040px; /* 固定容器宽度，空态/有数据一致 */
-  margin-left: auto;
-  margin-right: auto;
 }
 
-.empty-grid { min-height: 120px; }
-
-.section-footer {
+.am-hot__empty {
+  min-height: 180px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  background: rgba(248,250,252,0.84);
+}
+
+.am-hot__footer {
+  display: flex;
+  justify-content: center;
   align-items: center;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
 }
 
 @media (max-width: 1200px) {
-  .products-grid { grid-template-columns: repeat(3, 1fr); width: 780px; }
+  .am-hot__grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 768px) {
-  .products-grid { grid-template-columns: repeat(2, 1fr); width: 520px; }
-  .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .filters { flex-direction: column; gap: 12px; }
+  .am-hot__grid { grid-template-columns: repeat(2, 1fr); }
+  .am-hot__panel-head { flex-direction: column; align-items: flex-start; }
+  .am-hot__filters { flex-direction: column; gap: 12px; }
 }
 </style>
 

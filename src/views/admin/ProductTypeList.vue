@@ -1,21 +1,18 @@
 <template>
   <div class="product-type-list">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>商品类型管理</span>
-          <el-button type="primary" @click="showAddDialog = true">
-            <el-icon><Plus /></el-icon>
-            添加类型
-          </el-button>
-        </div>
-      </template>
+    <div class="page-header">
+      <h2>规格模板管理</h2>
+      <el-button type="primary" @click="showAddDialog = true">
+        <el-icon><Plus /></el-icon>
+        添加模板
+      </el-button>
+    </div>
 
-      <!-- 搜索栏 -->
+    <el-card class="search-card">
       <div class="search-bar">
         <el-input
           v-model="searchForm.search"
-          placeholder="搜索类型名称或描述"
+          placeholder="搜索模板名称或描述"
           style="width: 300px"
           clearable
           @keyup.enter="handleSearch"
@@ -25,9 +22,22 @@
           </template>
         </el-input>
         <el-select
+          v-model="searchForm.category_id"
+          placeholder="所属分类"
+          style="width: 160px"
+          clearable
+        >
+          <el-option
+            v-for="category in categories"
+            :key="category.id"
+            :label="category.name"
+            :value="category.id"
+          />
+        </el-select>
+        <el-select
           v-model="searchForm.status"
           placeholder="状态"
-          style="width: 120px; margin-left: 10px"
+          style="width: 120px"
           clearable
         >
           <el-option label="全部" :value="null" />
@@ -37,8 +47,9 @@
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="handleReset">重置</el-button>
       </div>
+    </el-card>
 
-      <!-- 表格 -->
+    <el-card class="table-card">
       <el-table
         :data="tableData"
         v-loading="loading"
@@ -46,20 +57,18 @@
         row-key="id"
       >
         <el-table-column prop="id" label="编号" width="80" />
-        <el-table-column prop="name" label="类型名称" min-width="150" />
-        <el-table-column prop="attribute_count" label="属性数量" width="100" align="center" />
+        <el-table-column prop="name" label="模板名称" min-width="150" />
+        <el-table-column prop="category_name" label="所属分类" min-width="140" />
+        <el-table-column prop="attribute_count" label="规格项数量" width="110" align="center" />
         <el-table-column prop="parameter_count" label="参数数量" width="100" align="center">
           <template #default="{ row }">
             {{ row.attribute_count || 0 }}
           </template>
         </el-table-column>
-        <el-table-column label="设置" width="200" align="center">
+        <el-table-column label="模板配置" width="140" align="center">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewAttributes(row)">
-              属性列表
-            </el-button>
-            <el-button type="info" size="small" @click="handleViewParameters(row)">
-              参数列表
+              查看规格项
             </el-button>
           </template>
         </el-table-column>
@@ -69,7 +78,7 @@
               编辑
             </el-button>
             <el-popconfirm
-              title="确定要删除这个商品类型吗？"
+              title="确定要删除这个规格模板吗？"
               @confirm="handleDelete(row.id)"
             >
               <template #reference>
@@ -97,7 +106,7 @@
     <!-- 添加/编辑对话框 -->
     <el-dialog
       v-model="showAddDialog"
-      :title="editingItem ? '编辑商品类型' : '添加商品类型'"
+      :title="editingItem ? '编辑规格模板' : '添加规格模板'"
       width="500px"
     >
       <el-form
@@ -106,8 +115,18 @@
         :rules="rules"
         label-width="100px"
       >
-        <el-form-item label="类型名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入类型名称" />
+        <el-form-item label="所属分类" prop="category_id">
+          <el-select v-model="form.category_id" placeholder="请选择所属分类" style="width: 100%">
+            <el-option
+              v-for="category in categories"
+              :key="category.id"
+              :label="category.name"
+              :value="category.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模板名称" prop="name">
+          <el-input v-model="form.name" placeholder="请输入模板名称" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input
@@ -157,11 +176,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import ProductAttributeManager from './ProductAttributeManager.vue'
-import { productTypeAPI } from '@/services/api'
+import { categoryAPI, productTypeAPI } from '@/services/api'
 
 // 响应式数据
 const loading = ref(false)
 const tableData = ref([])
+const categories = ref([])
 const showAddDialog = ref(false)
 const showAttributesDialog = ref(false)
 const editingItem = ref(null)
@@ -171,6 +191,7 @@ const formRef = ref()
 // 搜索表单
 const searchForm = reactive({
   search: '',
+  category_id: null,
   status: null
 })
 
@@ -183,6 +204,7 @@ const pagination = reactive({
 
 // 表单数据
 const form = reactive({
+  category_id: null,
   name: '',
   description: '',
   icon: '',
@@ -192,10 +214,22 @@ const form = reactive({
 
 // 表单验证规则
 const rules = {
+  category_id: [
+    { required: true, message: '请选择所属分类', trigger: 'change' }
+  ],
   name: [
-    { required: true, message: '请输入类型名称', trigger: 'blur' },
+    { required: true, message: '请输入模板名称', trigger: 'blur' },
     { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
   ]
+}
+
+const fetchCategories = async () => {
+  try {
+    const response = await categoryAPI.getCategories()
+    categories.value = response.data || []
+  } catch (error) {
+    ElMessage.error('获取分类失败：' + error.message)
+  }
 }
 
 // 获取列表数据
@@ -206,6 +240,7 @@ const fetchData = async () => {
       page: pagination.page,
       limit: pagination.limit,
       search: searchForm.search,
+      category_id: searchForm.category_id,
       status: searchForm.status
     }
     const response = await productTypeAPI.getList(params)
@@ -227,6 +262,7 @@ const handleSearch = () => {
 // 重置搜索
 const handleReset = () => {
   searchForm.search = ''
+  searchForm.category_id = null
   searchForm.status = null
   pagination.page = 1
   fetchData()
@@ -248,6 +284,7 @@ const handleCurrentChange = (val) => {
 const handleEdit = (row) => {
   editingItem.value = row
   Object.assign(form, {
+    category_id: row.category_id,
     name: row.name,
     description: row.description || '',
     icon: row.icon || '',
@@ -259,13 +296,6 @@ const handleEdit = (row) => {
 
 // 查看属性
 const handleViewAttributes = (row) => {
-  currentProductTypeId.value = row.id
-  showAttributesDialog.value = true
-}
-
-// 查看参数
-const handleViewParameters = (row) => {
-  // 参数列表与属性列表相同，这里可以复用
   currentProductTypeId.value = row.id
   showAttributesDialog.value = true
 }
@@ -306,6 +336,7 @@ const handleSubmit = async () => {
 const resetForm = () => {
   editingItem.value = null
   Object.assign(form, {
+    category_id: null,
     name: '',
     description: '',
     icon: '',
@@ -322,25 +353,42 @@ const handleDialogClose = () => {
 
 // 组件挂载
 onMounted(() => {
+  fetchCategories()
   fetchData()
 })
 </script>
 
 <style scoped>
 .product-type-list {
-  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.search-card {
+  margin-bottom: 20px;
 }
 
 .search-bar {
-  margin-bottom: 20px;
   display: flex;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.table-card {
+  margin-bottom: 20px;
 }
 
 .type-icon {

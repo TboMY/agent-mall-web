@@ -1,89 +1,143 @@
 <template>
-  <div class="category-management">
+  <div class="category-list">
     <div class="page-header">
-      <h1>分类管理</h1>
-      <el-button type="primary" @click="showCreateDialog">
+      <h2>分类管理</h2>
+      <el-button type="primary" @click="showCreateDialog()">
         <el-icon><Plus /></el-icon>
         新增分类
       </el-button>
     </div>
 
-    <!-- 搜索栏 -->
-    <div class="search-bar">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索分类名称"
-        style="width: 300px"
-        clearable
-        @input="handleSearch"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-    </div>
+    <el-card class="search-card">
+      <div class="search-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索分类名称"
+          style="width: 320px"
+          clearable
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-alert
+          v-if="searchKeyword"
+          class="search-tip"
+          type="info"
+          :closable="false"
+          title="搜索模式下仅支持查看和编辑，拖拽排序会暂时关闭。"
+        />
+      </div>
+    </el-card>
 
-    <!-- 分类列表 -->
-    <div class="table-container">
-      <el-table
-        :data="filteredCategories"
-        style="width: 100%"
-        v-loading="loading"
-        empty-text="暂无分类数据"
-        row-key="id"
-        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-      >
-        <el-table-column prop="name" label="分类名称" width="200">
-          <template #default="{ row }">
-            <div class="category-name">
-              <el-image
-                v-if="row.icon"
-                :src="row.icon"
-                style="width: 20px; height: 20px; margin-right: 8px"
-                fit="cover"
-              />
-              <span>{{ row.name }}</span>
+    <el-card class="table-card" v-loading="loading">
+      <template v-if="filteredCategories.length > 0">
+        <div
+          class="category-groups"
+          @dragover.prevent
+        >
+          <div
+            v-for="topCategory in filteredCategories"
+            :key="topCategory.id"
+            class="category-group"
+            :class="{ 'is-drag-target': dragTargetParentId === topCategory.parent_id && dragTargetId === topCategory.id }"
+            draggable="true"
+            @dragstart="handleDragStart($event, topCategory)"
+            @dragenter.prevent="handleDragEnter($event, topCategory)"
+            @dragend="handleDragEnd"
+            @drop.prevent="handleDrop($event, topCategory)"
+          >
+            <div class="category-group-header">
+              <button
+                v-if="topCategory.children?.length"
+                type="button"
+                class="expand-toggle"
+                @click.stop="toggleExpand(topCategory.id)"
+              >
+                <el-icon :class="{ expanded: isExpanded(topCategory.id) }"><ArrowRight /></el-icon>
+              </button>
+              <span v-else class="expand-placeholder"></span>
+              <div class="drag-handle" :class="{ disabled: Boolean(searchKeyword) }">
+                <el-icon><Rank /></el-icon>
+              </div>
+              <div class="category-info">
+                <div class="category-title-line">
+                  <span class="category-name">{{ topCategory.name }}</span>
+                  <el-tag size="small" type="primary" effect="plain">一级分类</el-tag>
+                </div>
+                <div class="category-desc">
+                  {{ topCategory.description || '顶级导航分类' }}
+                </div>
+              </div>
+              <div class="category-actions">
+                <el-button size="small" text type="primary" @click="showCreateDialog(topCategory)">
+                  新增子分类
+                </el-button>
+                <el-tag :type="topCategory.status === 1 ? 'success' : 'danger'">
+                  {{ topCategory.status === 1 ? '启用' : '禁用' }}
+                </el-tag>
+                <el-button size="small" @click="editCategory(topCategory)">编辑</el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  :disabled="topCategory.children?.length > 0"
+                  @click="deleteCategory(topCategory)"
+                >
+                  删除
+                </el-button>
+              </div>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="level" label="层级" width="80">
-          <template #default="{ row }">
-            <el-tag :type="getLevelTagType(row.level)">
-              {{ getLevelText(row.level) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort_order" label="排序" width="80" />
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="editCategory(row)">编辑</el-button>
-            <el-button
-              size="small"
-              type="danger"
-              @click="deleteCategory(row)"
-              :disabled="row.children && row.children.length > 0"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
 
-    <!-- 新增/编辑分类对话框 -->
+            <div v-if="topCategory.children?.length && isExpanded(topCategory.id)" class="children-list">
+              <div
+                v-for="child in topCategory.children"
+                :key="child.id"
+                class="child-row"
+                :class="{ 'is-drag-target': dragTargetParentId === child.parent_id && dragTargetId === child.id }"
+                draggable="true"
+                @dragstart="handleDragStart($event, child)"
+                @dragenter.prevent="handleDragEnter($event, child)"
+                @dragend="handleDragEnd"
+                @drop.prevent="handleDrop($event, child)"
+              >
+                <div class="child-indent">
+                  <span class="indent-line"></span>
+                  <span class="indent-line horizontal"></span>
+                </div>
+                <div class="drag-handle" :class="{ disabled: Boolean(searchKeyword) }">
+                  <el-icon><Rank /></el-icon>
+                </div>
+                <div class="category-info">
+                  <div class="category-title-line">
+                    <span class="category-name">{{ child.name }}</span>
+                    <el-tag size="small" type="success" effect="plain">二级分类</el-tag>
+                  </div>
+                  <div class="category-desc">
+                    {{ child.description || `归属上级分类 ID：${child.parent_id}` }}
+                  </div>
+                </div>
+                <div class="category-actions">
+                  <el-tag :type="child.status === 1 ? 'success' : 'danger'">
+                    {{ child.status === 1 ? '启用' : '禁用' }}
+                  </el-tag>
+                  <el-button size="small" @click="editCategory(child)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="deleteCategory(child)">
+                    删除
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <el-empty v-else description="暂无分类数据" />
+    </el-card>
+
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑分类' : '新增分类'"
-      width="600px"
+      width="560px"
       @close="resetForm"
     >
       <el-form
@@ -99,28 +153,15 @@
           <el-select v-model="form.parent_id" placeholder="请选择父分类" style="width: 100%">
             <el-option label="顶级分类" :value="0" />
             <el-option
-              v-for="category in parentCategories"
+              v-for="category in topLevelCategories"
               :key="category.id"
               :label="category.name"
               :value="category.id"
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="分类层级" prop="level">
-          <el-input-number
-            v-model="form.level"
-            :min="1"
-            :max="3"
-            :disabled="form.parent_id > 0"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="排序" prop="sort_order">
-          <el-input-number
-            v-model="form.sort_order"
-            :min="0"
-            style="width: 100%"
-          />
+        <el-form-item label="当前层级">
+          <el-input :model-value="form.parent_id === 0 ? '一级分类' : '二级分类'" disabled />
         </el-form-item>
         <el-form-item label="分类图标" prop="icon">
           <el-input v-model="form.icon" placeholder="请输入图标URL" />
@@ -153,12 +194,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { ArrowRight, Plus, Rank, Search } from '@element-plus/icons-vue'
 import { categoryAPI } from '@/services/api'
 
-// 响应式数据
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
@@ -166,50 +206,49 @@ const isEdit = ref(false)
 const searchKeyword = ref('')
 const categories = ref([])
 const formRef = ref()
+const draggingId = ref(null)
+const dragSourceParentId = ref(null)
+const dragTargetId = ref(null)
+const dragTargetParentId = ref(null)
+const expandedIds = ref([])
+const temporarilyCollapsedId = ref(null)
 
-// 表单数据
 const form = reactive({
   id: null,
   name: '',
   parent_id: 0,
-  level: 1,
-  sort_order: 0,
   icon: '',
   description: '',
   status: 1
 })
 
-// 表单验证规则
 const rules = {
   name: [
     { required: true, message: '请输入分类名称', trigger: 'blur' },
     { min: 1, max: 100, message: '分类名称长度在1到100个字符', trigger: 'blur' }
-  ],
-  level: [
-    { required: true, message: '请选择分类层级', trigger: 'blur' }
   ],
   icon: [
     { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
   ]
 }
 
-// 计算属性
 const filteredCategories = computed(() => {
-  if (!searchKeyword.value) return categories.value
-  return filterCategoriesByKeyword(categories.value, searchKeyword.value)
+  const keyword = searchKeyword.value.trim().toLowerCase()
+  if (!keyword) {
+    return categories.value
+  }
+  return filterTreeByKeyword(categories.value, keyword)
 })
 
-const parentCategories = computed(() => {
-  return categories.value.filter(cat => cat.level < 3)
-})
+const topLevelCategories = computed(() => categories.value.map((item) => ({ id: item.id, name: item.name })))
 
-// 方法
-const loadCategories = async () => {
+async function loadCategories() {
   loading.value = true
   try {
     const response = await categoryAPI.getCategoryTree()
     if (response.success) {
-      categories.value = response.data
+      categories.value = response.data || []
+      expandedIds.value = (response.data || []).map((item) => item.id)
     } else {
       ElMessage.error(response.message || '获取分类列表失败')
     }
@@ -221,38 +260,48 @@ const loadCategories = async () => {
   }
 }
 
-const filterCategoriesByKeyword = (categories, keyword) => {
-  const result = []
-  for (const category of categories) {
-    if (category.name.toLowerCase().includes(keyword.toLowerCase())) {
-      result.push(category)
-    }
-    if (category.children && category.children.length > 0) {
-      const filteredChildren = filterCategoriesByKeyword(category.children, keyword)
-      if (filteredChildren.length > 0) {
-        result.push(...filteredChildren)
+function filterTreeByKeyword(items, keyword) {
+  return items
+    .map((item) => {
+      const children = item.children?.length ? filterTreeByKeyword(item.children, keyword) : []
+      const matched = item.name.toLowerCase().includes(keyword)
+      if (matched || children.length > 0) {
+        return {
+          ...item,
+          children
+        }
       }
-    }
-  }
-  return result
+      return null
+    })
+    .filter(Boolean)
 }
 
-const showCreateDialog = () => {
+function showCreateDialog(parent = null) {
   isEdit.value = false
-  dialogVisible.value = true
   resetForm()
-}
-
-const editCategory = (category) => {
-  isEdit.value = true
+  if (parent) {
+    form.parent_id = parent.id
+  }
   dialogVisible.value = true
-  Object.assign(form, category)
 }
 
-const deleteCategory = async (category) => {
+function editCategory(category) {
+  isEdit.value = true
+  Object.assign(form, {
+    id: category.id,
+    name: category.name,
+    parent_id: category.parent_id,
+    icon: category.icon || '',
+    description: category.description || '',
+    status: category.status
+  })
+  dialogVisible.value = true
+}
+
+async function deleteCategory(category) {
   try {
     await ElMessageBox.confirm(
-      `确定要删除分类"${category.name}"吗？`,
+      `确定要删除分类“${category.name}”吗？`,
       '确认删除',
       {
         confirmButtonText: '确定',
@@ -276,29 +325,26 @@ const deleteCategory = async (category) => {
   }
 }
 
-const submitForm = async () => {
+async function submitForm() {
   if (!formRef.value) return
-  
+
   try {
     await formRef.value.validate()
     submitting.value = true
 
-    const formData = { ...form }
-    delete formData.id // 移除ID字段
-
-    // 如果选择了父分类，自动计算层级
-    if (formData.parent_id > 0) {
-      const parentCategory = categories.value.find(cat => cat.id === formData.parent_id)
-      if (parentCategory) {
-        formData.level = parentCategory.level + 1
-      }
+    const payload = {
+      name: form.name,
+      parent_id: form.parent_id,
+      icon: form.icon,
+      description: form.description,
+      status: form.status
     }
 
     let response
     if (isEdit.value) {
-      response = await categoryAPI.updateCategory(form.id, formData)
+      response = await categoryAPI.updateCategory(form.id, payload)
     } else {
-      response = await categoryAPI.createCategory(formData)
+      response = await categoryAPI.createCategory(payload)
     }
 
     if (response.success) {
@@ -310,7 +356,7 @@ const submitForm = async () => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('提交表单失败:', error)
+      console.error('提交分类失败:', error)
       ElMessage.error(error.response?.data?.message || (isEdit.value ? '更新失败' : '创建失败'))
     }
   } finally {
@@ -318,57 +364,130 @@ const submitForm = async () => {
   }
 }
 
-const resetForm = () => {
-  if (formRef.value) {
-    formRef.value.resetFields()
-  }
+function resetForm() {
+  formRef.value?.resetFields()
   Object.assign(form, {
     id: null,
     name: '',
     parent_id: 0,
-    level: 1,
-    sort_order: 0,
     icon: '',
     description: '',
     status: 1
   })
 }
 
-const handleSearch = () => {
-  // 搜索逻辑已在computed中处理
+function isExpanded(id) {
+  return expandedIds.value.includes(id)
 }
 
-const getLevelTagType = (level) => {
-  const types = { 1: 'primary', 2: 'success', 3: 'warning' }
-  return types[level] || 'info'
-}
-
-const getLevelText = (level) => {
-  const texts = { 1: '一级', 2: '二级', 3: '三级' }
-  return texts[level] || '未知'
-}
-
-// 监听父分类变化，自动计算层级
-watch(() => form.parent_id, (newParentId) => {
-  if (newParentId === 0) {
-    form.level = 1
+function toggleExpand(id) {
+  if (isExpanded(id)) {
+    expandedIds.value = expandedIds.value.filter((item) => item !== id)
   } else {
-    const parentCategory = categories.value.find(cat => cat.id === newParentId)
-    if (parentCategory) {
-      form.level = parentCategory.level + 1
-    }
+    expandedIds.value = [...expandedIds.value, id]
   }
-})
+}
 
-// 生命周期
+function handleDragStart(event, category) {
+  event.stopPropagation()
+  if (searchKeyword.value) {
+    event.preventDefault()
+    return
+  }
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.dropEffect = 'move'
+    event.dataTransfer.setData('text/plain', String(category.id))
+  }
+  draggingId.value = category.id
+  dragSourceParentId.value = Number(category.parent_id)
+  if (Number(category.level) === 1 && category.children?.length && isExpanded(category.id)) {
+    temporarilyCollapsedId.value = category.id
+    expandedIds.value = expandedIds.value.filter((item) => item !== category.id)
+  }
+}
+
+function handleDragEnter(event, category) {
+  event.stopPropagation()
+  if (!draggingId.value || searchKeyword.value) {
+    return
+  }
+  dragTargetId.value = category.id
+  dragTargetParentId.value = Number(category.parent_id)
+}
+
+function handleDragEnd() {
+  draggingId.value = null
+  dragSourceParentId.value = null
+  dragTargetId.value = null
+  dragTargetParentId.value = null
+  if (temporarilyCollapsedId.value && !isExpanded(temporarilyCollapsedId.value)) {
+    expandedIds.value = [...expandedIds.value, temporarilyCollapsedId.value]
+  }
+  temporarilyCollapsedId.value = null
+}
+
+async function handleDrop(event, category) {
+  event.stopPropagation()
+  if (!draggingId.value || searchKeyword.value) {
+    handleDragEnd()
+    return
+  }
+
+  if (draggingId.value === category.id) {
+    handleDragEnd()
+    return
+  }
+
+  if (Number(dragSourceParentId.value) !== Number(category.parent_id)) {
+    ElMessage.warning('只能拖拽排序同级分类')
+    handleDragEnd()
+    return
+  }
+
+  const siblingParentId = Number(category.parent_id)
+  const siblingList = siblingParentId === 0
+    ? [...categories.value]
+    : [...(findTopCategoryById(siblingParentId)?.children || [])]
+
+  const sourceIndex = siblingList.findIndex((item) => item.id === draggingId.value)
+  const targetIndex = siblingList.findIndex((item) => item.id === category.id)
+
+  if (sourceIndex === -1 || targetIndex === -1) {
+    handleDragEnd()
+    return
+  }
+
+  const [moved] = siblingList.splice(sourceIndex, 1)
+  siblingList.splice(targetIndex, 0, moved)
+
+  try {
+    await categoryAPI.reorderCategories({
+      parent_id: siblingParentId,
+      ordered_ids: siblingList.map((item) => item.id)
+    })
+    ElMessage.success('排序已更新')
+    await loadCategories()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '排序更新失败')
+  } finally {
+    handleDragEnd()
+  }
+}
+
+function findTopCategoryById(id) {
+  return categories.value.find((item) => item.id === id) || null
+}
+
 onMounted(() => {
   loadCategories()
 })
 </script>
 
 <style scoped>
-.category-management {
-  padding: 20px;
+.category-list {
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
 .page-header {
@@ -378,30 +497,201 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.page-header h1 {
+.page-header h2 {
   margin: 0;
   color: #303133;
 }
 
-.search-bar {
+.search-card {
   margin-bottom: 20px;
 }
 
-.table-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-tip {
+  width: auto;
+  flex: 1;
+}
+
+.table-card {
+  margin-bottom: 20px;
+}
+
+.category-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.category-group {
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
   overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.category-group.is-drag-target,
+.child-row.is-drag-target {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.12);
+}
+
+.category-group-header,
+.child-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.category-group-header {
+  background: #fcfcfd;
+  min-height: 86px;
+}
+
+.children-list {
+  padding: 8px 0 12px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.child-row {
+  position: relative;
+  margin-left: 24px;
+  padding-left: 54px;
+  min-height: 76px;
+  background: linear-gradient(90deg, rgba(245, 247, 250, 0.75) 0, rgba(255, 255, 255, 0) 68px);
+}
+
+.child-indent {
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+}
+
+.indent-line {
+  position: absolute;
+  left: 13px;
+  top: -1px;
+  bottom: 50%;
+  width: 1px;
+  background: #d6dbe6;
+}
+
+.indent-line.horizontal {
+  top: 50%;
+  bottom: auto;
+  width: 18px;
+  height: 1px;
+}
+
+.expand-toggle,
+.expand-placeholder {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.expand-toggle {
+  border: 0;
+  background: transparent;
+  color: #606266;
+  cursor: pointer;
+  padding: 0;
+}
+
+.expand-toggle .el-icon {
+  transition: transform 0.2s ease;
+}
+
+.expand-toggle .el-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f4f6f8;
+  color: #909399;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.drag-handle.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.category-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.category-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
 .category-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.category-desc {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.category-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  max-width: 260px;
+  margin-left: auto;
 }
 
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .category-group-header,
+  .child-row {
+    align-items: flex-start;
+  }
+
+  .category-actions {
+    justify-content: flex-start;
+    max-width: none;
+    margin-left: 0;
+  }
 }
 </style>

@@ -157,16 +157,15 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="库存" width="100" align="center">
+        <el-table-column label="SKU" width="90" align="center">
           <template #default="{ row }">
-            <div class="stock-input-wrapper">
-              <el-input-number
-                v-model="row.stock"
-                :min="0"
-                size="small"
-                @change="handleStockChange(row)"
-              />
-            </div>
+            {{ row.sku_count || 0 }} 个
+          </template>
+        </el-table-column>
+
+        <el-table-column label="总库存" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.stock }}
           </template>
         </el-table-column>
         
@@ -205,7 +204,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="goToEdit(row.id)">
               <el-icon><Edit /></el-icon>
@@ -366,17 +365,6 @@ async function handleBatchStatus(status) {
     getProducts()
   } catch (error) {
     ElMessage.error('状态更新失败')
-  }
-}
-
-// 更新库存
-async function handleStockChange(row) {
-  try {
-    await productAPI.updateProductStock(row.id, row.stock)
-    ElMessage.success('库存更新成功')
-  } catch (error) {
-    ElMessage.error('库存更新失败')
-    getProducts() // 重新获取数据
   }
 }
 
@@ -554,12 +542,6 @@ onMounted(() => {
   font-size: 12px;
   color: #909399;
   text-decoration: line-through;
-}
-
-.stock-input-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .status-wrapper {

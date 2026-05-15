@@ -14,10 +14,9 @@ const sortOptions = [
   { label: '按热度排序', value: 'heat' }
 ]
 
-// 与后端 products.source_platform 对齐：bilibili/douyin/xiaohongshu
+// 与后端 products.source_platform 对齐：bilibili/douyin
 const sourceOptions = [
   { label: '全部来源', value: 'all' },
-  { label: '小红书', value: 'xiaohongshu' },
   { label: '抖音', value: 'douyin' },
   { label: 'B站', value: 'bilibili' }
 ]
