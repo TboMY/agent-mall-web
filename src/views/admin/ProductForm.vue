@@ -198,22 +198,27 @@
           </el-col>
 
           <el-col :span="24">
-            <div
-              v-for="(sku, index) in skuList"
-              :key="sku.localId"
-              class="sku-card"
-            >
+              <div
+                v-for="(sku, index) in skuList"
+                :key="sku.localId"
+                class="sku-card"
+              >
               <div class="sku-card-header">
                 <div class="sku-card-title">SKU {{ index + 1 }}</div>
-                <el-button
-                  type="danger"
-                  plain
-                  size="small"
-                  :disabled="skuList.length <= 1"
-                  @click="removeSkuRow(index)"
-                >
-                  删除
-                </el-button>
+                <div class="sku-card-actions">
+                  <el-button plain size="small" @click="fillSkuNameFromSpecs(sku)">
+                    生成名称
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    plain
+                    size="small"
+                    :disabled="skuList.length <= 1"
+                    @click="removeSkuRow(index)"
+                  >
+                    删除
+                  </el-button>
+                </div>
               </div>
 
               <el-row :gutter="16">
@@ -281,80 +286,64 @@
                   </el-form-item>
                 </el-col>
               </el-row>
-            </div>
-          </el-col>
-        </el-row>
 
-        <el-row :gutter="20" v-if="productAttributes.length > 0 || form.product_type_id">
-          <!-- 规格信息 -->
-          <el-col :span="24">
-            <div class="form-section">
-              <h3>规格信息</h3>
-              <div v-if="productAttributes.length === 0 && form.product_type_id" style="color: #999; font-size: 14px; margin-top: 5px;">
-                该规格模板暂无规格项
+              <div v-if="productAttributes.length" class="sku-spec-editor">
+                <div class="sku-spec-editor__title">SKU规格绑定</div>
+                <el-row :gutter="16">
+                  <el-col
+                    v-for="attribute in productAttributes"
+                    :key="`${sku.localId}-${attribute.id}`"
+                    :span="8"
+                  >
+                    <el-form-item :label="attribute.name" :required="attribute.is_required === 1">
+                      <el-select
+                        v-if="attribute.value_type === 'single'"
+                        :model-value="getSkuAttributeValue(sku, attribute)"
+                        :placeholder="`请选择${attribute.name}`"
+                        clearable
+                        style="width: 100%"
+                        @change="setSkuAttributeValue(sku, attribute, $event)"
+                      >
+                        <el-option
+                          v-for="value in attribute.values"
+                          :key="value.id"
+                          :label="value.label"
+                          :value="value.id"
+                        />
+                      </el-select>
+
+                      <el-select
+                        v-else-if="attribute.value_type === 'multiple'"
+                        :model-value="getSkuAttributeValue(sku, attribute)"
+                        :placeholder="`请选择${attribute.name}`"
+                        multiple
+                        clearable
+                        style="width: 100%"
+                        @change="setSkuAttributeValue(sku, attribute, $event)"
+                      >
+                        <el-option
+                          v-for="value in attribute.values"
+                          :key="value.id"
+                          :label="value.label"
+                          :value="value.id"
+                        />
+                      </el-select>
+
+                      <el-input
+                        v-else
+                        :model-value="getSkuAttributeValue(sku, attribute)"
+                        :placeholder="`请输入${attribute.name}`"
+                        @input="setSkuAttributeValue(sku, attribute, $event)"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <div v-if="getSkuSpecPreview(sku)" class="sku-spec-editor__preview">
+                  当前规格：{{ getSkuSpecPreview(sku) }}
+                </div>
               </div>
             </div>
-          </el-col>
-          
-          <el-col :span="24" v-for="attribute in productAttributes" :key="attribute.id">
-            <el-form-item 
-              :label="attribute.name" 
-              :prop="`specifications.${attribute.id}`"
-              :rules="attribute.is_required ? [{ required: true, message: `请选择${attribute.name}`, trigger: 'change' }] : []"
-            >
-              <!-- 单选类型 -->
-              <el-select
-                v-if="attribute.value_type === 'single'"
-                v-model="safeSpecifications[attribute.id]"
-                :placeholder="`请选择${attribute.name}`"
-                style="width: 100%"
-                clearable
-                @focus="ensureSpecificationsObject"
-                @mounted="ensureSpecificationsObject"
-              >
-                <el-option
-                  v-for="value in attribute.values"
-                  :key="value.id"
-                  :label="value.label"
-                  :value="value.id"
-                >
-                  <span>{{ value.label }}</span>
-                  <span v-if="value.color" class="color-preview" :style="{ backgroundColor: value.color }"></span>
-                </el-option>
-              </el-select>
-              
-              <!-- 多选类型 -->
-              <el-select
-                v-else-if="attribute.value_type === 'multiple'"
-                v-model="safeSpecifications[attribute.id]"
-                :placeholder="`请选择${attribute.name}`"
-                style="width: 100%"
-                multiple
-                clearable
-                @focus="ensureSpecificationsObject"
-                @mounted="ensureSpecificationsObject"
-              >
-                <el-option
-                  v-for="value in attribute.values"
-                  :key="value.id"
-                  :label="value.label"
-                  :value="value.id"
-                >
-                  <span>{{ value.label }}</span>
-                  <span v-if="value.color" class="color-preview" :style="{ backgroundColor: value.color }"></span>
-                </el-option>
-              </el-select>
-              
-              <!-- 自定义输入类型 -->
-              <el-input
-                v-else-if="attribute.value_type === 'custom'"
-                v-model="safeSpecifications[attribute.id]"
-                :placeholder="`请输入${attribute.name}`"
-                style="width: 100%"
-                @focus="ensureSpecificationsObject"
-                @mounted="ensureSpecificationsObject"
-              />
-            </el-form-item>
           </el-col>
         </el-row>
 
@@ -523,7 +512,6 @@ const form = reactive({
   category_id: null,
   brand_id: null,
   product_type_id: null,
-  specifications: {},
   stock: 0,
   heat_score: 0,
   is_ai_recommended: false,
@@ -532,36 +520,6 @@ const form = reactive({
   source_url: '',
   status: 1,
   ai_candidate_id: null // 新增：AI候选商品ID
-})
-
-// 强制确保specifications是对象
-Object.defineProperty(form, 'specifications', {
-  get() {
-    return this._specifications || {}
-  },
-  set(value) {
-    this._specifications = value || {}
-  }
-})
-
-// 确保specifications始终是对象
-const ensureSpecificationsObject = () => {
-  if (!form.specifications || typeof form.specifications !== 'object') {
-    form.specifications = {}
-  }
-}
-
-// 计算属性：安全的specifications对象
-const safeSpecifications = computed({
-  get() {
-    if (!form.specifications || typeof form.specifications !== 'object') {
-      return {}
-    }
-    return form.specifications
-  },
-  set(value) {
-    form.specifications = value
-  }
 })
 
 // 表单验证规则
@@ -595,6 +553,108 @@ const createEmptySku = () => ({
   sort_order: (skuList.value.length + 1) * 10,
   specs: []
 })
+
+function normalizeSkuSpecs(specs = []) {
+  if (!Array.isArray(specs)) return []
+  return specs
+    .map((spec) => ({
+      attribute_id: Number(spec.attribute_id),
+      attribute_value_id: spec.attribute_value_id ? Number(spec.attribute_value_id) : null,
+      custom_value: spec.custom_value || null
+    }))
+    .filter((spec) => Number.isFinite(spec.attribute_id))
+}
+
+function getAttributeOptionLabel(attribute, valueId) {
+  const target = (attribute.values || []).find((item) => Number(item.id) === Number(valueId))
+  return target?.label || target?.value || ''
+}
+
+function getSkuAttributeValue(sku, attribute) {
+  const specs = normalizeSkuSpecs(sku.specs)
+  const matched = specs.filter((item) => Number(item.attribute_id) === Number(attribute.id))
+
+  if (attribute.value_type === 'multiple') {
+    return matched.map((item) => item.attribute_value_id).filter(Boolean)
+  }
+
+  if (attribute.value_type === 'custom') {
+    return matched[0]?.custom_value || ''
+  }
+
+  return matched[0]?.attribute_value_id || null
+}
+
+function setSkuAttributeValue(sku, attribute, value) {
+  const retained = normalizeSkuSpecs(sku.specs).filter((item) => Number(item.attribute_id) !== Number(attribute.id))
+
+  if (attribute.value_type === 'multiple') {
+    const nextValues = Array.isArray(value) ? value : []
+    sku.specs = [
+      ...retained,
+      ...nextValues
+        .filter(Boolean)
+        .map((item) => ({
+          attribute_id: Number(attribute.id),
+          attribute_value_id: Number(item),
+          custom_value: null
+        }))
+    ]
+    return
+  }
+
+  if (attribute.value_type === 'custom') {
+    const nextValue = String(value || '').trim()
+    sku.specs = nextValue
+      ? [
+          ...retained,
+          {
+            attribute_id: Number(attribute.id),
+            attribute_value_id: null,
+            custom_value: nextValue
+          }
+        ]
+      : retained
+    return
+  }
+
+  sku.specs = value
+    ? [
+        ...retained,
+        {
+          attribute_id: Number(attribute.id),
+          attribute_value_id: Number(value),
+          custom_value: null
+        }
+      ]
+    : retained
+}
+
+function getSkuSpecPreview(sku) {
+  const specs = normalizeSkuSpecs(sku.specs)
+  if (!specs.length) return ''
+
+  return specs
+    .map((spec) => {
+      const attribute = productAttributes.value.find((item) => Number(item.id) === Number(spec.attribute_id))
+      if (!attribute) return ''
+      const label = spec.attribute_value_id
+        ? getAttributeOptionLabel(attribute, spec.attribute_value_id)
+        : (spec.custom_value || '')
+      return label ? `${attribute.name}：${label}` : ''
+    })
+    .filter(Boolean)
+    .join(' / ')
+}
+
+function fillSkuNameFromSpecs(sku) {
+  const preview = getSkuSpecPreview(sku)
+  if (!preview) {
+    ElMessage.warning('请先为该 SKU 选择规格')
+    return
+  }
+  sku.sku_name = preview
+}
 
 const skuSummary = computed(() => {
   if (!skuList.value.length) {
@@ -656,6 +716,15 @@ function validateSkuList() {
       }
       seenCodes.add(code)
     }
+
+    productAttributes.value.forEach((attribute) => {
+      if (Number(attribute.is_required) !== 1) return
+      const value = getSkuAttributeValue(sku, attribute)
+      const valid = Array.isArray(value) ? value.length > 0 : String(value ?? '').trim() !== ''
+      if (!valid) {
+        throw new Error(`请为第 ${index + 1} 个SKU选择 ${attribute.name}`)
+      }
+    })
   })
 
   if (!skuList.value.some((item) => item.is_default === 1)) {
@@ -674,7 +743,7 @@ function buildSubmitSkus() {
     status: Number(sku.status ?? 1),
     is_default: Number(sku.is_default ?? (index === 0 ? 1 : 0)),
     sort_order: (index + 1) * 10,
-    specs: Array.isArray(sku.specs) ? sku.specs : []
+    specs: normalizeSkuSpecs(sku.specs)
   }))
 }
 
@@ -710,8 +779,10 @@ async function getProductTypes() {
 
     if (form.product_type_id && !productTypes.value.some(item => item.id === form.product_type_id)) {
       form.product_type_id = null
-      form.specifications = {}
       productAttributes.value = []
+      skuList.value.forEach((sku) => {
+        sku.specs = []
+      })
     }
   } catch (error) {
     console.error('获取规格模板列表失败:', error)
@@ -749,19 +820,19 @@ async function getProductAttributes(productTypeId) {
 // 处理商品类型变化
 async function handleProductTypeChange(productTypeId) {
   console.log('规格模板变化:', productTypeId)
-  // 确保specifications是对象
-  ensureSpecificationsObject()
-  // 清空规格信息
-  form.specifications = {}
-  
   // 获取该商品类型的属性
   await getProductAttributes(productTypeId)
+  skuList.value.forEach((sku) => {
+    sku.specs = []
+  })
 }
 
 async function handleCategoryChange() {
   form.product_type_id = null
-  form.specifications = {}
   productAttributes.value = []
+  skuList.value.forEach((sku) => {
+    sku.specs = []
+  })
   await getProductTypes()
 }
 
@@ -799,43 +870,16 @@ async function getProductDetail() {
       imageList.value = images.length > 0 ? images : ['']
     }
     
-    // 处理商品类型和规格信息
+    // 处理商品类型与 SKU 规格配置
     console.log('编辑模式：商品数据:', product)
     console.log('编辑模式：商品类型ID:', product.product_type_id)
-    console.log('编辑模式：规格信息:', product.specifications)
 
     await getProductTypes()
     
     if (product.product_type_id) {
       console.log('编辑模式：加载规格模板属性，模板ID:', product.product_type_id)
       await getProductAttributes(product.product_type_id)
-      
-      // 确保specifications是对象
-      ensureSpecificationsObject()
-      
-      // 加载商品规格信息
-      if (product.specifications) {
-        try {
-          const specifications = typeof product.specifications === 'string' 
-            ? JSON.parse(product.specifications) 
-            : product.specifications
-          form.specifications = specifications
-          console.log('编辑模式：加载商品规格信息:', specifications)
-        } catch (error) {
-          console.error('解析商品规格信息失败:', error)
-          form.specifications = {}
-        }
-      } else {
-        console.log('编辑模式：商品没有规格信息，初始化为空对象')
-        form.specifications = {}
-      }
-    } else {
-      console.log('编辑模式：商品没有类型ID，清空规格信息')
-      ensureSpecificationsObject()
     }
-    
-    // 确保在编辑模式下也显示规格信息模块（即使没有规格数据）
-    console.log('编辑模式：当前属性数量:', productAttributes.value.length)
     
     // 处理标签列表（兼容数组/JSON字符串/逗号分隔）
     if (product.tags) {
@@ -865,7 +909,7 @@ async function getProductDetail() {
         status: Number(sku.status ?? 1),
         is_default: Number(sku.is_default ?? (index === 0 ? 1 : 0)),
         sort_order: Number(sku.sort_order ?? (index + 1) * 10),
-        specs: Array.isArray(sku.specs) ? sku.specs : []
+        specs: normalizeSkuSpecs(sku.specs)
       }))
     } else {
       skuList.value = [createEmptySku()]
@@ -945,7 +989,6 @@ async function handleSubmit() {
     if (isEdit.value) {
       delete cleaned.ai_candidate_id
     }
-    delete cleaned._specifications
 
     const submitData = {
       ...cleaned,
@@ -992,8 +1035,6 @@ function goBack() {
 
 // 页面加载时获取数据
 onMounted(async () => {
-  // 确保specifications是对象
-  ensureSpecificationsObject()
   skuList.value = [createEmptySku()]
   
   // 先加载基础数据
@@ -1150,10 +1191,35 @@ function handleAIRecommendationData() {
   margin-bottom: 12px;
 }
 
+.sku-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sku-card-title {
   color: #303133;
   font-size: 15px;
   font-weight: 600;
+}
+
+.sku-spec-editor {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed #dbe2ec;
+}
+
+.sku-spec-editor__title {
+  margin-bottom: 12px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sku-spec-editor__preview {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .image-preview {

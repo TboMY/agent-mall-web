@@ -121,7 +121,9 @@ onMounted(bootstrapCart)
                 />
               </label>
 
-              <img :src="item.sku_image || item.product_image" :alt="item.product_name" class="am-cart__item-image" />
+              <div class="am-cart__item-visual">
+                <img :src="item.sku_image || item.product_image" :alt="item.product_name" class="am-cart__item-image" />
+              </div>
 
               <div class="am-cart__item-info">
                 <h3>{{ item.product_name }}</h3>
@@ -371,7 +373,7 @@ onMounted(bootstrapCart)
 
 .am-cart__item {
   display: grid;
-  grid-template-columns: auto 96px 1.4fr 0.7fr 0.8fr 0.7fr auto;
+  grid-template-columns: auto 120px minmax(220px, 1.4fr) 0.7fr 0.8fr 0.7fr auto;
   gap: 14px;
   align-items: center;
   padding: 16px;
@@ -379,10 +381,21 @@ onMounted(bootstrapCart)
   background: rgba(248,250,252,0.84);
 }
 
+.am-cart__item-visual {
+  width: 120px;
+  height: 120px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #f7fafc 0%, #e7eef5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(19,35,55,0.06);
+}
+
 .am-cart__item-image {
-  width: 96px;
-  height: 96px;
-  border-radius: 18px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 

@@ -12,6 +12,7 @@ import CustomerAuthView from '@/views/CustomerAuthView.vue'
 import AdminAgentView from '@/views/AdminAgentView.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminLogin from '@/views/admin/Login.vue'
+import DashboardView from '@/views/admin/Dashboard.vue'
 import ProductList from '@/views/admin/ProductList.vue'
 import ProductForm from '@/views/admin/ProductForm.vue'
 import UserList from '@/views/admin/UserList.vue'
@@ -50,7 +51,7 @@ const router = createRouter({
       component: AdminLayout,
       redirect: '/admin/dashboard',
       children: [
-        { path: 'dashboard', component: { template: '<div>仪表盘</div>' }, meta: { permission: 'dashboard.view' } },
+        { path: 'dashboard', component: DashboardView, meta: { permission: 'dashboard.view' } },
         { 
           path: 'ai-workbench', 
           component: AIWorkbenchLayout,
